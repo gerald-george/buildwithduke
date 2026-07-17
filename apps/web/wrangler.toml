@@ -1,0 +1,16 @@
+name = "buildwithduke"
+compatibility_date = "2026-07-17"
+pages_build_output_dir = "build/client"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "buildwithduke"
+database_id = "replace-after-wrangler-d1-create"
+
+[[r2_buckets]]
+binding = "MEDIA"
+bucket_name = "buildwithduke-media"
+
+[[kv_namespaces]]
+binding = "CACHE"
+id = "replace-after-kv-create"

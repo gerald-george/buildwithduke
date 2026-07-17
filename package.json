@@ -1,0 +1,13 @@
+{
+  "name": "buildwithduke",
+  "version": "1.0.0",
+  "private": true,
+  "packageManager": "pnpm@10.13.1",
+  "scripts": {
+    "dev": "pnpm --filter @buildwithduke/web dev",
+    "build": "pnpm --filter @buildwithduke/web build",
+    "typecheck": "pnpm --filter @buildwithduke/web typecheck",
+    "preview": "pnpm --filter @buildwithduke/web preview"
+  },
+  "workspaces": ["apps/*", "packages/*", "packages/db-adapters/*"]
+}

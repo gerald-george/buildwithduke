@@ -1,0 +1,165 @@
+import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
+import { Link, Navigate, Route, Routes, useLocation, useParams } from "react-router-dom";
+import { ArrowDown, ArrowRight, ArrowUpRight, Award, BookOpen, Bot, Check, CheckCircle2, CircleDot, Clock3, Code2, Database, Download, ExternalLink, Github, GraduationCap, Mail, MapPin, MessageCircle, Send, ShieldCheck, Sparkles, Workflow, Wrench } from "lucide-react";
+import { FAQ, IconBox, Layout, ProjectVisual, SectionHead, TerminalWindow, WhatsAppLink } from "./components";
+import { faq, pricing, projects } from "./data";
+
+const meta: Record<string, [string, string]> = {
+  "/": ["buildwithduke — Full-stack developer & AI automation specialist", "I build fast web products and useful AI automations for UK founders and small businesses."],
+  "/projects": ["Projects — buildwithduke", "Live web products, software and automation projects built by Duke."],
+  "/services": ["Services — buildwithduke", "Full-stack web development, AI automation and n8n workflows for UK businesses."],
+  "/pricing": ["Pricing — buildwithduke", "Clear GBP packages for websites, web applications and automation."],
+  "/about": ["About Duke — buildwithduke", "Full-stack developer, AI automation specialist and systems thinker."],
+  "/contact": ["Start a project — buildwithduke", "Tell Duke what you need to build, fix or automate."],
+};
+
+function PageMeta() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    const key = pathname.startsWith("/projects/") ? "/projects" : pathname;
+    const value = meta[key] || ["buildwithduke", "Full-stack products and useful automation."];
+    document.title = value[0];
+    document.querySelector('meta[name="description"]')?.setAttribute("content", value[1]);
+  }, [pathname]);
+  return null;
+}
+
+export default function App() {
+  return <Layout><PageMeta /><Routes>
+    <Route path="/" element={<Home />} />
+    <Route path="/projects" element={<Projects />} />
+    <Route path="/projects/:slug" element={<ProjectDetail />} />
+    <Route path="/services" element={<Services />} />
+    <Route path="/pricing" element={<Pricing />} />
+    <Route path="/about" element={<About />} />
+    <Route path="/contact" element={<Contact />} />
+    <Route path="/cv" element={<CV />} />
+    <Route path="/blog" element={<Blog />} />
+    <Route path="/privacy" element={<Legal type="privacy" />} />
+    <Route path="/cookies" element={<Legal type="cookies" />} />
+    <Route path="/terms" element={<Legal type="terms" />} />
+    <Route path="/admin" element={<Admin />} />
+    <Route path="*" element={<NotFound />} />
+  </Routes></Layout>;
+}
+
+function Home() {
+  return <>
+    <section className="hero">
+      <div className="hero-grid" aria-hidden="true" />
+      <div className="shell hero-inner">
+        <div className="hero-copy">
+          <div className="availability"><i /> Available for select projects · Q3 2026</div>
+          <h1>I build things that work<span> — and occasionally talk back.</span></h1>
+          <p>Full-stack developer and AI automation specialist. I turn messy workflows and static ideas into fast, living web apps.</p>
+          <div className="button-row"><Link className="button button-primary" to="/contact">Start a project <ArrowRight size={17} /></Link><Link className="button button-ghost" to="/projects">View live work <ArrowDown size={17} /></Link></div>
+          <div className="hero-meta"><span><MapPin size={15} /> Remote · UK-wide</span><span><Clock3 size={15} /> Replies within 24h</span></div>
+        </div>
+        <div className="hero-system" aria-label="Current system status">
+          <div className="system-head"><span>duke@buildwithduke:~</span><CircleDot size={16} /></div>
+          <div className="code-block">
+            <p><b>01</b><span className="code-blue">const</span> developer = {'{'}</p>
+            <p><b>02</b>&nbsp;&nbsp;name: <span className="code-green">&quot;Duke&quot;</span>,</p>
+            <p><b>03</b>&nbsp;&nbsp;focus: [<span className="code-green">&quot;web&quot;</span>, <span className="code-green">&quot;agents&quot;</span>],</p>
+            <p><b>04</b>&nbsp;&nbsp;method: <span className="code-green">&quot;make it make sense&quot;</span>,</p>
+            <p><b>05</b>&nbsp;&nbsp;ships: <span className="code-blue">true</span></p>
+            <p><b>06</b>{'}'};</p>
+            <p><b>07</b><span className="code-muted">// status: ready when you are_</span></p>
+          </div>
+          <div className="system-stats"><div><strong>22</strong><span>public repos</span></div><div><strong>99%</strong><span>data integrity</span></div><div><strong>1st</strong><span>class honours</span></div></div>
+        </div>
+      </div>
+      <div className="stack-ticker"><div>React <i /> TypeScript <i /> Cloudflare <i /> n8n <i /> OpenAI <i /> D1 <i /> Drizzle <i /> React <i /> TypeScript <i /> Cloudflare <i /> n8n <i /> OpenAI</div></div>
+    </section>
+
+    <section className="section shell" id="work"><SectionHead label="01 / Selected work" title="Some things I’ve shipped." copy="Real builds, real links. Open them and have a look around." />
+      <div className="featured-grid">{projects.filter(p => p.featured).map((project, i) => <TerminalWindow key={project.slug} label={`~/projects/${project.slug}`} className={`project-card project-card-${i + 1}`}>
+        <ProjectVisual image={project.image} title={project.title} /><div className="project-card-body"><div className="project-eyebrow">{project.eyebrow}</div><h3>{project.title}</h3><p>{project.description}</p><div className="tag-row">{project.stack.slice(0, 3).map(t => <span key={t}>{t}</span>)}</div>{project.demo && <div className="demo-note"><CircleDot size={13} /> Demo build · live client agreement in place</div>}<div className="card-actions"><Link to={`/projects/${project.slug}`}>Case study <ArrowRight size={15} /></Link><a href={project.liveUrl} target="_blank" rel="noreferrer">Visit <ArrowUpRight size={15} /></a></div></div>
+      </TerminalWindow>)}</div>
+      <div className="section-end"><Link className="text-link" to="/projects">Explore every project <ArrowRight size={16} /></Link></div>
+    </section>
+
+    <section className="proof-band"><div className="shell proof-grid"><div className="whoami"><span className="prompt">$ whoami</span><blockquote>“A systems thinker who enjoys the moment a messy thing finally makes sense.”</blockquote><span className="cursor-line">duke@buildwithduke <i /></span></div><div className="proof-list">
+      {[['65%', 'less manual workload', 'Automation that returns hours to the people doing the work.'], ['73%', 'lead growth', 'Digital systems designed around an outcome, not decoration.'], ['1M+', 'views in seven days', 'Campaign infrastructure ready when attention arrives.'], ['99%', 'data integrity', 'Library-science rigour applied to production software.']].map(([num, label, copy]) => <div key={num}><strong>{num}</strong><span>{label}</span><p>{copy}</p></div>)}
+    </div></div></section>
+
+    <section className="section shell"><SectionHead label="02 / The process" title="Clear steps. No mystery fog." copy="You always know what is being decided, built and tested." /><div className="process-grid">{[
+      ['01', 'Discover', 'Map the problem, users, constraints and the outcome worth paying for.', '$ context --load'],
+      ['02', 'Design', 'Shape the flow and visual system before expensive code decisions settle.', '$ prototype --test'],
+      ['03', 'Build', 'Ship in visible increments with clean interfaces and sensible adapters.', '$ build --observe'],
+      ['04', 'Launch', 'Test the real journey, document the system and stay close after go-live.', '$ deploy --steady'],
+    ].map(([n, title, copy, log]) => <div key={n} className="process-step"><span>{n}</span><h3>{title}</h3><p>{copy}</p><code>{log}</code></div>)}</div></section>
+
+    <section className="section section-lined"><div className="shell"><SectionHead label="03 / Pricing preview" title="A useful starting point." copy="Clear scopes for common builds. Anything unusual gets a clear custom proposal." /><div className="pricing-preview">{[pricing[0], pricing[2], pricing[3]].map(t => <PriceCard key={t.name} tier={t} />)}</div><div className="section-end"><Link className="text-link" to="/pricing">Compare all five packages <ArrowRight size={16} /></Link></div></div></section>
+
+    <section className="section shell faq-section"><SectionHead label="04 / Before you ask" title="Straight answers." /><FAQ items={faq.slice(0, 4)} /></section>
+    <CTA />
+  </>;
+}
+
+function PageHero({ label, title, copy, children }: { label: string; title: string; copy: string; children?: ReactNode }) {
+  return <section className="page-hero"><div className="shell"><span className="kicker">{label}</span><h1>{title}</h1><p>{copy}</p>{children}</div></section>;
+}
+
+function Projects() {
+  const [filter, setFilter] = useState("All");
+  const shown = useMemo(() => filter === "All" ? projects : projects.filter(p => p.category === filter), [filter]);
+  return <><PageHero label="/projects" title="Built, shipped, and doing the work." copy="Web products, automation and software. The demo builds are labelled plainly; the live links are here for inspection." />
+    <section className="section shell"><div className="filter-bar" role="group" aria-label="Filter projects">{["All", "Web development", "AI automation", "Software"].map(item => <button aria-pressed={filter === item} onClick={() => setFilter(item)} key={item}>{item}</button>)}</div>
+      <div className="project-index">{shown.map(project => <TerminalWindow label={`~/projects/${project.slug}`} key={project.slug} className="project-index-card"><ProjectVisual image={project.image} title={project.title} /><div className="project-card-body"><div className="project-eyebrow">{project.eyebrow}</div><h2>{project.title}</h2><p>{project.description}</p><div className="tag-row">{project.stack.map(t => <span key={t}>{t}</span>)}</div>{project.demo && <div className="demo-note"><CircleDot size={13} /> Demo build · live client agreement in place</div>}<div className="card-actions"><Link to={`/projects/${project.slug}`}>Read case study <ArrowRight size={15} /></Link><a href={project.liveUrl} target="_blank" rel="noreferrer">Open live <ArrowUpRight size={15} /></a></div></div></TerminalWindow>)}</div>
+    </section><CTA /></>;
+}
+
+function ProjectDetail() {
+  const { slug } = useParams(); const project = projects.find(p => p.slug === slug);
+  if (!project) return <Navigate to="/projects" replace />;
+  const related = projects.filter(p => p.slug !== project.slug && p.category === project.category).slice(0, 2);
+  return <><section className="case-hero"><div className="shell"><Link className="back-link" to="/projects">← All projects</Link><div className="case-title"><div><span className="kicker">{project.eyebrow}</span><h1>{project.title}</h1><p>{project.description}</p><div className="button-row"><a className="button button-primary" href={project.liveUrl} target="_blank" rel="noreferrer">Visit project <ExternalLink size={17} /></a><Link className="button button-ghost" to="/contact">Build something useful</Link></div></div><TerminalWindow label={`${project.slug}.live`}><ProjectVisual image={project.image} title={project.title} /></TerminalWindow></div></div></section>
+    <section className="section shell case-body"><aside><span>Project index</span><a href="#problem">01 Problem</a><a href="#build">02 Build</a><a href="#result">03 Result</a></aside><div className="case-copy"><section id="problem"><span className="kicker">01 / The problem</span><h2>What needed to change.</h2><p>{project.problem}</p></section><section id="build"><span className="kicker">02 / The build</span><h2>The useful part.</h2><p>{project.solution}</p><div className="stack-list">{project.stack.map(s => <span key={s}><Check size={14} />{s}</span>)}</div></section><section id="result"><span className="kicker">03 / The result</span><h2>What shipped.</h2><p>{project.result}</p>{project.demo && <div className="callout"><ShieldCheck size={20} /><span><strong>Honest demo label</strong>This is a demo build with a live client agreement in place. It is not presented as the client’s production storefront.</span></div>}</section></div></section>
+    {related.length > 0 && <section className="section section-lined"><div className="shell"><SectionHead label="Keep looking" title="Related work." /><div className="related-grid">{related.map(p => <Link to={`/projects/${p.slug}`} key={p.slug}><span>{p.eyebrow}</span><h3>{p.title}</h3><ArrowUpRight /></Link>)}</div></div></section>}<CTA /></>;
+}
+
+const services = [
+  { icon: <Code2 />, name: "Websites & web apps", copy: "Responsive, fast interfaces with the admin and data layer needed to keep them useful after launch.", list: ["React and TypeScript builds", "Cloudflare deployment", "Admin and CRUD systems", "Technical SEO and analytics"] },
+  { icon: <Bot />, name: "AI automation", copy: "Agentic workflows that remove repetitive effort while keeping human judgement exactly where it matters.", list: ["Workflow discovery", "API and model integration", "Human review steps", "Monitoring and handover"] },
+  { icon: <Workflow />, name: "n8n workflows", copy: "Observable automations for leads, content, CRM hygiene and the operational gaps between your tools.", list: ["Lead routing", "WordPress publishing", "CRM synchronisation", "Failure alerts"] },
+  { icon: <Wrench />, name: "Systems improvement", copy: "A practical technical pass on a workflow or product that has grown harder to operate than it should be.", list: ["Architecture review", "Performance work", "Data cleanup", "Incremental rebuilds"] },
+];
+function Services() { return <><PageHero label="/services" title="Useful systems, not technology theatre." copy="I design and build the shortest sensible route from a messy process to a system your team can actually operate." /><section className="section shell"><div className="service-grid">{services.map((s, i) => <article key={s.name}><IconBox>{s.icon}</IconBox><span className="service-num">0{i + 1}</span><h2>{s.name}</h2><p>{s.copy}</p><ul>{s.list.map(x => <li key={x}><Check size={15} />{x}</li>)}</ul><Link to="/contact">Discuss this service <ArrowRight size={15} /></Link></article>)}</div></section><section className="proof-band"><div className="shell service-callout"><div><span className="kicker">A useful first step</span><h2>Not sure what the system should be yet?</h2></div><p>That is normal. Start with the bottleneck, not a shopping list of technology. I’ll help map the right scope before proposing a build.</p></div></section><CTA /></> }
+
+function PriceCard({ tier }: { tier: (typeof pricing)[number] }) { return <TerminalWindow label={`pricing/${tier.name.toLowerCase()}`} className={tier.popular ? "price-card popular" : "price-card"}>{tier.popular && <span className="popular-badge">Most popular</span>}<div className="price-body"><span className="price-name">{tier.name}</span><strong>{tier.price}</strong><p>{tier.note}</p><ul>{tier.features.map(f => <li key={f}><CheckCircle2 size={16} />{f}</li>)}</ul><Link className={tier.popular ? "button button-primary" : "button button-ghost"} to={`/contact?package=${tier.name.toLowerCase()}`}>Choose {tier.name} <ArrowRight size={16} /></Link></div></TerminalWindow> }
+function Pricing() { return <><PageHero label="/pricing" title="Straightforward pricing, no surprises." copy="Five practical starting points in GBP. Final scope and payment milestones are agreed in writing before work begins." /><section className="section shell"><div className="pricing-full">{pricing.map(t => <PriceCard key={t.name} tier={t} />)}</div><div className="payment-note"><ShieldCheck /><div><strong>Clear commercial basics.</strong><p>Projects start with an agreed deposit through bank transfer or a secure Stripe Payment Link. No VAT is currently charged. You retain ownership after final payment.</p></div></div></section><section className="section section-lined"><div className="shell faq-section"><SectionHead label="Pricing FAQ" title="The practical bits." /><FAQ items={faq} /></div></section><CTA /></> }
+
+function About() { return <><PageHero label="/about" title="Hi, I’m Duke." copy="I like systems, clean hand-offs, and the exact moment a complicated thing becomes understandable." /><section className="section shell about-intro"><div className="portrait-frame"><div className="terminal-bar"><span className="window-dots"><i /><i /><i /></span><span>duke.profile</span></div><img src="/duke.jpg" alt="Duke Chijimaka Jonathan" /><span className="portrait-status"><i /> open to useful problems</span></div><div className="about-copy"><span className="kicker">The short version</span><h2>Library-science rigour. Product-builder energy.</h2><p>I’m a full-stack developer and AI automation specialist who started with a First-Class degree in Library and Information Science. That background still shows up in how I work: understand the information, understand the people, then make the system make sense.</p><p>I use agentic, AI-assisted development to move faster, but I care more about judgement than novelty. The output still has to be legible, maintainable and useful when the demo is over.</p><p>Away from a screen, I tend to drift toward origami, astronomy and theology: three different ways of asking what structure is hiding underneath the surface.</p><div className="button-row"><Link className="button button-primary" to="/cv">Read the formal version <ArrowRight size={17} /></Link><a className="button button-ghost" href="https://github.com/BuildWithDuke" target="_blank" rel="noreferrer"><Github size={17} /> GitHub</a></div></div></section>
+    <section className="section section-lined"><div className="shell"><SectionHead label="Proof, not posturing" title="A few useful coordinates." /><div className="credential-grid">{[[<GraduationCap />, 'First-Class Honours', 'B.LIS · University of Port Harcourt'], [<Award />, 'Best Graduating Student', 'Overall graduating class · 2025'], [<Sparkles />, 'SUSI Exchange Alumnus', 'U.S. Department of State · 2025'], [<BookOpen />, 'Published research', 'Information systems and cataloguing']].map(([icon, title, copy]) => <article key={String(title)}><IconBox>{icon}</IconBox><h3>{title}</h3><p>{copy}</p></article>)}</div></div></section><CTA /></> }
+
+function Contact() {
+  const location = useLocation();
+  const params = new URLSearchParams(location.search);
+  const [state, setState] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault(); setState("sending"); const form = event.currentTarget; const payload = Object.fromEntries(new FormData(form));
+    try { const response = await fetch("/api/contact", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) }); if (!response.ok) throw new Error(); setState("sent"); form.reset(); } catch { setState("error"); }
+  };
+  return <><PageHero label="/contact" title="Let’s talk." copy="Tell me what is stuck, missing or ready to become real. I usually reply within 24 hours, UK time." /><section className="section shell contact-grid"><div className="contact-aside"><TerminalWindow label="contact.channels"><div className="contact-lines"><a href="mailto:buildwithduke@outlook.com"><Mail /><span><small>Email</small>buildwithduke@outlook.com</span></a><a href="tel:+447000000000"><MessageCircle /><span><small>Phone</small>+44 7000 000000 <em>placeholder</em></span></a><a href="https://github.com/BuildWithDuke" target="_blank" rel="noreferrer"><Github /><span><small>GitHub</small>@BuildWithDuke</span></a><div><MapPin /><span><small>Based</small>Remote · UK-wide</span></div></div></TerminalWindow><div className="contact-note"><Clock3 /><p><strong>Prefer the fast lane?</strong>WhatsApp is often the quickest route for a first conversation.</p><WhatsAppLink /></div></div>
+      <form className="contact-form" onSubmit={submit}><div className="form-head"><span className="kicker">New enquiry</span><h2>What are we building?</h2></div><div className="form-row"><label>Name <input name="name" autoComplete="name" required minLength={2} /></label><label>Email <input name="email" type="email" autoComplete="email" required /></label></div><label>Company <span>(optional)</span><input name="company" autoComplete="organization" /></label><div className="form-row"><label>Project type <select name="projectType" defaultValue={params.get("intent") === "hire" ? "Web application" : ""}><option value="" disabled>Choose one</option><option>Business website</option><option>Web application</option><option>AI automation</option><option>n8n workflow</option><option>Something unusual</option></select></label><label>Budget range <select name="budget" defaultValue={params.get("package") ? "£1,000–£2,500" : ""}><option value="" disabled>Choose one</option><option>Under £1,000</option><option>£1,000–£2,500</option><option>£2,500–£5,000</option><option>£5,000+</option><option>Not sure yet</option></select></label></div><label>Tell me about it <textarea name="message" required minLength={20} rows={6} placeholder="What needs to change, who is it for, and what would a good result look like?" /></label><label className="consent"><input type="checkbox" name="consent" value="yes" required /><span>I’m happy for Duke to use these details to reply to my enquiry. No mailing list, no third-party sharing. <Link to="/privacy">Privacy policy</Link>.</span></label>{import.meta.env.VITE_TURNSTILE_SITE_KEY && <div className="cf-turnstile" data-sitekey={import.meta.env.VITE_TURNSTILE_SITE_KEY} data-theme="auto" />}<input type="text" name="website" className="honeypot" tabIndex={-1} autoComplete="off" aria-hidden="true" /><button className="button button-primary submit-button" disabled={state === "sending"}>{state === "sending" ? "Sending…" : <>Send enquiry <Send size={17} /></>}</button>{state === "sent" && <p className="form-status success">Received. I’ll reply within 24 hours, UK time.</p>}{state === "error" && <p className="form-status error">The form endpoint is not connected in this preview. Email or WhatsApp still works.</p>}</form></section></>;
+}
+
+function CV() { return <><PageHero label="/cv" title="The formal version." copy="Experience, credentials and the work behind the quieter confidence." /><section className="section shell cv-layout"><aside><div className="portrait-mini"><img src="/duke.jpg" alt="Duke Chijimaka Jonathan" /></div><h2>Duke Chijimaka Jonathan</h2><p>Full-stack developer<br />AI automation specialist</p><a href="mailto:buildwithduke@outlook.com">buildwithduke@outlook.com</a><span>Remote · UK-wide</span><button className="button button-primary" disabled title="Add a PDF to R2 at deployment"><Download size={17} /> PDF coming soon</button></aside><div className="cv-main"><CVSection title="Profile"><p>Product-minded full-stack developer combining web engineering, workflow automation and information-systems discipline. Experienced in shipping Cloudflare-hosted products, custom admin systems and agentic workflows with measurable operational outcomes.</p></CVSection><CVSection title="Selected outcomes"><ul><li>Reduced manual workload by up to 65% through practical workflow automation.</li><li>Supported 73% lead growth with clearer digital acquisition systems.</li><li>Built campaign infrastructure that supported more than 1M views in seven days.</li><li>Reached 99% data integrity in evaluated cataloguing records.</li></ul></CVSection><CVSection title="Core stack"><div className="tag-row"><span>React</span><span>TypeScript</span><span>Cloudflare</span><span>n8n</span><span>Node.js</span><span>Python</span><span>D1</span><span>Drizzle</span><span>AI agents</span></div></CVSection><CVSection title="Education & recognition"><div className="cv-entry"><strong>First-Class Honours, B.LIS</strong><span>University of Port Harcourt</span></div><div className="cv-entry"><strong>Overall Best Graduating Student</strong><span>2025</span></div><div className="cv-entry"><strong>SUSI Exchange Alumnus</strong><span>U.S. Department of State · 2025</span></div></CVSection></div></section></> }
+function CVSection({ title, children }: { title: string; children: ReactNode }) { return <section><span className="kicker">{title}</span>{children}</section> }
+
+function Blog() { return <><PageHero label="/build-log" title="Notes from the workbench." copy="Clear writing on automation, web systems and the practical side of building with AI." /><section className="section shell"><div className="blog-grid">{[["Automation", "n8n vs Zapier for a small UK business", "A practical comparison based on ownership, complexity and what happens when a workflow fails."], ["Agentic development", "What AI-assisted development actually means", "The useful distinction between moving faster and outsourcing judgement."], ["Web strategy", "Your business needs more than a Linktree", "Why owned structure, search visibility and conversion paths still matter."]].map(([tag, title, copy], i) => <article key={title}><span className="kicker">{tag} · 0{i + 1}</span><h2>{title}</h2><p>{copy}</p><span className="muted">Draft in progress</span></article>)}</div></section></> }
+
+const legal = {
+  privacy: { title: "Privacy policy", updated: "17 July 2026", intro: "This policy explains what information I collect through buildwithduke, why I collect it, and the choices you have.", sections: [["Who controls your data", "Duke Chijimaka Jonathan, trading as buildwithduke, is the data controller. Contact buildwithduke@outlook.com for any privacy request."], ["What I collect", "When you send an enquiry, I collect your name, email, optional company, project details and consent record. Basic server security logs may also record an IP address temporarily."], ["Why and how long", "I use enquiry data only to respond, prepare a proposal and keep necessary business records. Unconverted enquiries are reviewed and deleted after 12 months."], ["Your rights", "Under UK data protection law you may ask to access, correct, erase, restrict or export your personal information, and you may object to processing."], ["Service providers", "Cloudflare may process delivery and security data. Resend processes enquiry emails when configured. Data is not sold and is not used for unrelated marketing."]]},
+  cookies: { title: "Cookie policy", updated: "17 July 2026", intro: "This site starts with necessary storage only. Optional analytics stays off until you choose it.", sections: [["Necessary storage", "The site stores your colour theme and cookie choice locally in your browser. These are required to remember the settings you selected."], ["Analytics", "Anonymous analytics may be enabled only after consent. It is used to understand page performance and broad usage, not to build an advertising profile."], ["Changing your choice", "Clear this site's local storage in your browser to reset your preference. A permanent preference control will be added alongside production analytics."], ["Third-party links", "Links to GitHub, LinkedIn, WhatsApp and live projects follow those services' own privacy and cookie policies once opened."]]},
+  terms: { title: "Website terms", updated: "17 July 2026", intro: "These terms cover use of this portfolio. Project work is governed by a separate written proposal and contract.", sections: [["Information", "I aim to keep project, service and pricing information accurate, but website content is general information rather than a binding offer."], ["Intellectual property", "Unless stated otherwise, the writing, design and original code on this site belong to Duke Chijimaka Jonathan. Client project names and brands belong to their respective owners."], ["External links", "Live project and social links are provided for convenience. I do not control third-party availability, content or security."], ["Project pricing", "Displayed package prices are starting points. Scope, delivery, payment milestones, ownership and support are confirmed in a written agreement before work begins."], ["Liability", "Nothing here limits liability where it cannot legally be limited. Otherwise, use of this informational website is at your own risk."]]},
+};
+function Legal({ type }: { type: keyof typeof legal }) { const doc = legal[type]; return <><PageHero label="/legal" title={doc.title} copy={doc.intro}><span className="legal-date">Last updated: {doc.updated}</span></PageHero><section className="section shell legal-copy">{doc.sections.map(([title, copy], i) => <section key={title}><span>0{i + 1}</span><div><h2>{title}</h2><p>{copy}</p></div></section>)}</section></> }
+
+function Admin() { const [loggedIn, setLoggedIn] = useState(false); if (!loggedIn) return <section className="admin-page"><TerminalWindow label="admin@buildwithduke — secure"><div className="admin-login"><IconBox><Database /></IconBox><span className="kicker">Restricted route</span><h1>Admin console</h1><p>The production route uses a hashed password, rate limiting, CSRF protection and a secure session cookie.</p><label>Email<input type="email" defaultValue="buildwithduke@outlook.com" /></label><label>Password<input type="password" defaultValue="local-preview" /></label><button className="button button-primary" onClick={() => setLoggedIn(true)}>Open local preview <ArrowRight size={16} /></button><small>Preview only · no production session created</small></div></TerminalWindow></section>;
+  const modules = [["Projects", projects.length, "Add, edit, reorder and feature case studies"], ["Leads", 0, "Review, export and update enquiry status"], ["Pricing", pricing.length, "Edit packages and deposit links"], ["DAEMON commands", 7, "Manage responses and terminal actions"]];
+  return <section className="admin-dashboard"><div className="shell"><div className="admin-title"><div><span className="kicker">Local preview</span><h1>Control room</h1></div><button className="button button-ghost" onClick={() => setLoggedIn(false)}>Lock console</button></div><div className="admin-stats">{modules.map(([name, count, copy]) => <article key={String(name)}><span>{name}</span><strong>{count}</strong><p>{copy}</p><button>Edit module <ArrowRight size={14} /></button></article>)}</div><TerminalWindow label="recent.activity"><div className="empty-state"><Database /><h2>No D1 binding in local preview</h2><p>Run the included migration and bind the production database to populate live activity.</p></div></TerminalWindow></div></section> }
+
+function CTA() { return <section className="final-cta"><div className="shell"><span className="kicker">$ sudo start-project</span><h2>Got something messy that needs to make sense?</h2><p>Good. That’s usually where the useful work starts.</p><div className="button-row"><Link className="button button-primary" to="/contact">Start a project <ArrowRight size={17} /></Link><WhatsAppLink /></div></div></section> }
+function NotFound() { return <section className="not-found"><span>404</span><h1>That route wandered off.</h1><p>DAEMON checked twice. There is nothing deployed here.</p><Link className="button button-primary" to="/">Return home <ArrowRight size={16} /></Link></section> }
