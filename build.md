@@ -30,11 +30,12 @@ A persistent, dismissible mini terminal window (styled like a real OS terminal, 
 **Assumptions made:**
 
 - Contact email: `buildwithduke@outlook.com` (as instructed)
-- UK phone number: stub `+44 7000 000000`
+- Public phone/WhatsApp number: `+234 915 215 1634` (verified against Duke’s public Linktree profile)
 - No registered UK company yet — site treated as a sole-trader freelance brand, not a Ltd company (no Companies House number shown); revisit if he incorporates
 - WhatsApp Business number reused from the existing Linktree WhatsApp link
 - “The Grills Corner” and “Home Away Travels” projects are Nigeria-based clients — kept in the portfolio as proof of range, clearly labelled by country, not misrepresented as UK work
-- `.dev`/demo-style URLs (e.g. Bemdproperties, EventStreamHD, Grills Corner) are labelled **“Demo build — live client agreement in place”** per Duke’s note, never presented as if they’re the client’s actual production storefront
+- Demo-style portfolio entries (The Grills Corner and Home Away Travels) are labelled **“Demo build — live client agreement in place”** per Duke’s note, never presented as if they’re the client’s actual production storefront
+- Bemdproperties and the Unconventional Soccer prompt/merch projects are deliberately excluded from the public portfolio
 - Pricing tiers on the site are buildwithduke’s own client-facing service packages (adapted from the same five-tier structure used internally), not this build’s own cost
 
 -----
@@ -44,12 +45,12 @@ A persistent, dismissible mini terminal window (styled like a real OS terminal, 
 |Tier             |Price equiv.|Best for                                            |Includes                                                                                                                                                                                   |
 |-----------------|------------|----------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 |1 — Foundation   |£499        |Simple brochure site                                |5 static pages, 1 contact form, core SEO                                                                                                                                                   |
-|2 — Growth       |£799        |Small business needing content flexibility          |D1-backed services/testimonials/blog, reviews widget                                                                                                                                       |
+|2 — Growth       |£999        |Small business needing content flexibility          |D1-backed services/testimonials/blog, reviews widget                                                                                                                                       |
 |3 — Professional |£1,499      |Business needing self-serve content + leads         |Admin dashboard, booking/quote flow, R2 uploads, Turnstile                                                                                                                                 |
-|**4 — Premium ✅**|**£1,999**  |**A living, interactive personal brand/agency site**|**Everything in 3, plus deep interactivity engine (DAEMON), R2-backed project media, lightweight Stripe payment links for deposits, unlimited landing pages, full custom animation system**|
+|**4 — Premium ✅**|**£1,999**  |**A living, interactive personal brand/agency site**|**Everything in 3, plus deep interactivity engine (DAEMON), R2-backed project media, bank-transfer quote/deposit guidance, unlimited landing pages, full custom animation system**|
 |5 — Custom       |POA         |Multi-service platforms, client portals             |Scoped separately                                                                                                                                                                          |
 
-**Recommendation: Tier 4 — Premium**, with one substitution: the standard “customer accounts/order tracking” Tier 4 feature is **not** needed (buildwithduke isn’t selling physical/digital products), so that budget is redirected into the DAEMON interaction engine, custom motion system, and a lightweight admin dashboard for Duke to manage his own projects/testimonials/pricing without redeploying code. Full Stripe checkout is replaced with **Stripe Payment Links** for optional deposit-taking on accepted quotes — enough commerce without building a shop he doesn’t need.
+**Recommendation: Tier 4 — Premium**, with one substitution: the standard “customer accounts/order tracking” Tier 4 feature is **not** needed (buildwithduke isn’t selling physical/digital products), so that budget is redirected into the DAEMON interaction engine, custom motion system, and a lightweight admin dashboard for Duke to manage his own projects/testimonials/pricing without redeploying code. **Bank transfer is the only payment method currently available**; details are shared privately after a quote is accepted.
 
 -----
 
@@ -63,8 +64,8 @@ A persistent, dismissible mini terminal window (styled like a real OS terminal, 
 - **Sales funnel:** Hero hook → proof (live projects with visit buttons) → credibility (results/education/awards) → how-I-work → pricing → FAQ (objection handling) → final CTA → footer
 - **Tone of voice:** First person throughout (“I build…”, “Here’s what I shipped…”), dry, warm, quietly funny — never corporate “we”. Matches the LinkedIn About voice supplied.
 - **Visual style:** Terminal-Noir — black/near-black canvas, monospace-accented headings, green/white/blue brand triad, DAEMON terminal companion, glitch-on-hover micro-interactions used sparingly as punctuation, not wallpaper.
-- **Technical complexity:** Medium-high — interaction-heavy frontend, D1-backed content (projects/testimonials/pricing), admin dashboard, R2 for project screenshots, Stripe Payment Links for deposits, no customer accounts.
-- **Needed (per tier):** ✅ Admin dashboard · ✅ DB-backed content · ✅ R2 uploads · ✅ Turnstile · ✅ light payments (deposit links only) · ❌ bookings/ordering · ❌ customer accounts
+- **Technical complexity:** Medium-high — interaction-heavy frontend, D1-backed content (projects/testimonials/pricing), admin dashboard, R2 for project screenshots, bank-transfer quote/deposit flow, no customer accounts.
+- **Needed (per tier):** ✅ Admin dashboard · ✅ DB-backed content · ✅ R2 uploads · ✅ Turnstile · ✅ bank-transfer guidance · ❌ card checkout · ❌ bookings/ordering · ❌ customer accounts
 
 **UK considerations:** WhatsApp click-to-chat, click-to-call (stub number), GBP pricing throughout, Trustpilot/testimonials section, UK GDPR-compliant cookie consent + Privacy/Terms/Cookie pages, BST/GMT-aware “usually replies within” indicator, no VAT display needed while unregistered.
 
@@ -111,7 +112,7 @@ Each project/service/pricing page carries its own meta title/description, schema
 - Display: **JetBrains Mono** or **Space Mono** (headings, DAEMON terminal, code-styled labels) — reinforces the brand wordmark
 - Body: **Inter** or **General Sans** (readable prose, case studies, forms) — workhorse contrast to the monospace display
 
-**Imagery:** Real screenshots of Duke’s live projects (EventStreamHD, Bemdproperties, Fraser James, etc.) inside a custom “browser/terminal frame” component — never generic stock photography. Duke’s own headshot (from Linktree avatar or a new one) used sparingly, framed inside a scanline/CRT-edge treatment consistent with the theme.
+**Imagery:** Real screenshots of Duke’s live projects (EventStreamHD, Fraser James, Folder-to-text merger, etc.) inside a custom “browser/terminal frame” component — never generic stock photography. Duke’s own headshot is used sparingly, framed inside a scanline/CRT-edge treatment consistent with the theme.
 
 **Icon style:** Lucide icons recoloured and restyled with a 1.5px monostroke, wrapped in small terminal-bracket badges (`[ ]`) rather than used bare at default size/colour.
 
@@ -121,7 +122,7 @@ Each project/service/pricing page carries its own meta title/description, schema
 
 **Header/nav behaviour:** Fixed top bar styled as a terminal title bar (`buildwithduke — zsh`), traffic-light dots recoloured brand triad, nav links styled as file-tab pills. Condenses to a slide-out CLI-style menu on mobile with a `$ menu --open` affordance.
 
-**Footer credit (Tier 1–3 default; Tier 4 removable on request — since this is Duke’s own site, it should read differently: keep a self-referential “Built by me, obviously” line instead of an external credit, since he *is* buildwithduke).** No external “Website design by buildwithduke” line applies here — replace with a footer Easter egg: `// built with agentic AI-assisted development — see how: /about`.
+**Footer credit:** No external agency credit line applies here because Duke is buildwithduke. Use the compact self-referential line `// built with ❤️` and the copyright brand `Build With Duke`.
 
 **CTA placement:** Sticky bottom-right DAEMON bubble doubles as a mobile sticky CTA; primary “Start a project” button repeats after hero, after proof section, and in final CTA.
 **Lead-capture flow:** Contact form (name, email, company, project type dropdown, budget range, message) → Pages Function → validated → stored in D1 `leads` table → email notification to `buildwithduke@outlook.com` via Resend → auto-responder to visitor → optional WhatsApp deep-link with pre-filled message.
@@ -215,10 +216,10 @@ Above-fold dual CTA, sticky DAEMON/WhatsApp bubble on mobile, short 5-field cont
 - Service area: UK-wide, remote
 - Services: Website & web app development, AI automation (n8n), agentic AI-assisted development, admin/CRUD systems
 - Email: [buildwithduke@outlook.com](mailto:buildwithduke@outlook.com)
-- Phone: +44 7000 000000
+- Phone/WhatsApp: +234 915 215 1634
 - WhatsApp: available via site button
 - Hours: Mon–Fri, 9am–6pm GMT/BST (flexible, remote)
-- Payment methods accepted: Bank transfer, Stripe payment links (deposits)
+- Payment methods accepted: Bank transfer only
 - Credentials: First-Class Honours B.LIS (University of Port Harcourt), U.S. State Dept SUSI 2025 Exchange Alumnus, Overall Best Graduating Student 2025
 
 Direct-answer FAQ content, natural-language service descriptions, no vague “synergy”-style marketing copy — concrete stack names and concrete outcomes throughout.
@@ -248,7 +249,7 @@ Mobile-first; DAEMON collapses to a small tappable icon (full terminal view open
 - **Nav/footer:** Terminal title-bar header; footer styled as a closing shell prompt
 - **Cursor:** Custom blinking block cursor on desktop pointer (progressive enhancement, disabled on touch)
 - **Loading/empty states:** Skeletons rendered as scanning/loading-bar terminal animations, not generic grey pulse blocks
-- **Foundation:** shadcn/ui as structural base only — every token (colour, radius, shadow, font) overridden per this system; default shadcn look must not be visible anywhere in the shipped site.
+- **Foundation:** bespoke React components and a custom CSS token system; no generic component-library defaults are visible in the shipped site.
 
 -----
 
@@ -256,15 +257,15 @@ Mobile-first; DAEMON collapses to a small tappable icon (full terminal view open
 
 **Framework:** React Router v7+ on Cloudflare Pages (default rule applies — no Next.js/Vercel signal present).
 
-**Stack:** Cloudflare Pages + Pages Functions · React Router v7 · TypeScript · Vite · pnpm workspaces · Tailwind CSS · shadcn/ui (heavily retokenised) · Radix primitives · Lucide React (customised) · Motion (Framer Motion) for scroll/hover/DAEMON animation · Zod · React Hook Form · Drizzle ORM · D1 · KV (SEO/theme/config cache) · R2 (project screenshots, CV PDF) · Cloudflare Turnstile (contact form spam protection) · Resend (email notifications) · Stripe Payment Links (deposit collection only, no full checkout) · GA4 or Plausible.
+**Stack:** Cloudflare Pages + Pages Functions · React Router v7 · TypeScript · Vite · pnpm workspaces · bespoke CSS design system · Lucide React and technology brand icons · IntersectionObserver/pointer-event motion system · D1 · KV (rate-limit/cache support) · R2 (project screenshots and PDF media) · Cloudflare Turnstile · Resend · bank transfer (details shared privately after quote acceptance) · consent-gated Plausible support.
 
 **Monorepo:**
 
 ```
 apps/web/
-apps/web/functions/          # Pages Functions: contact, leads, admin auth, daemon-log, deposit-link
+apps/web/functions/          # Pages Functions: contact, leads, admin auth, daemon-log
 packages/ui/                 # shared components incl. TerminalWindow, DaemonWidget, DecryptText
-packages/db/                 # Drizzle schema + queries
+packages/db/                 # portable SQL schema and migrations
 packages/db-adapters/cloudflare-d1/
 packages/db-adapters/supabase/
 packages/types/
@@ -272,14 +273,14 @@ packages/validators/         # Zod schemas: leadForm, projectSchema, pricingTier
 packages/email/              # Resend adapter
 packages/seo/
 packages/analytics/
-packages/payments/           # Stripe Payment Links wrapper
+packages/payments/           # portable bank-transfer instructions adapter
 packages/storage/            # R2 adapter + supabase-storage fallback
 packages/cache/
 packages/auth/               # admin login only
 packages/cookie-consent/
 ```
 
-**Pages Functions:** `POST /api/contact` (lead capture), `POST /api/daemon/log` (optional: store interesting DAEMON session events for Duke’s own curiosity — anonymised, opt-in via cookie consent), `POST /api/admin/*` (protected CRUD), `POST /api/deposit-link` (generates a Stripe Payment Link for an accepted quote).
+**Pages Functions:** `POST /api/contact` (lead capture), `POST /api/daemon/log` (optional: store interesting DAEMON session events for Duke’s own curiosity — anonymised, opt-in via cookie consent), `POST /api/admin/*` (protected CRUD). Bank details are never exposed through a public endpoint.
 
 **D1 tables:** `projects`, `testimonials`, `pricing_tiers`, `leads`, `blog_posts` (optional), `admin_users`, `daemon_commands` (so Duke can add/edit terminal command responses from the admin dashboard without a redeploy), `cookie_consents`.
 
@@ -307,7 +308,7 @@ All portable to Supabase Postgres with equivalent column types; R2 keys map to S
 
 ## 19. Admin Dashboard (Tier 3+ feature, included)
 
-Login-gated `/admin`. Manage: projects (add/edit/reorder/feature, upload screenshots to R2), testimonials, pricing tiers, leads (view/export/status), DAEMON command library (add new terminal responses without a redeploy — genuinely useful given the interactive concept), business settings (email, WhatsApp number, phone stub, hours). Built on shadcn/ui, clean and usable by Duke on mobile between client calls.
+Login-gated `/admin`. Manage: projects (add/edit/reorder/feature, upload screenshots to R2), testimonials, pricing tiers, leads (view/export/status), DAEMON command library (add new terminal responses without a redeploy — genuinely useful given the interactive concept), business settings (email, WhatsApp number, public phone, hours). Clean and usable by Duke on mobile between client calls.
 
 -----
 
@@ -319,7 +320,7 @@ Contact form: name, email, company (optional), project type (select), budget ran
 
 ## 23. Payments
 
-No shop, no customer accounts. Stripe **Payment Links** generated on-demand from the admin dashboard once a quote is agreed — sent to the client via email/WhatsApp for a deposit. Bank transfer (BACS/Faster Payments) offered as an alternative, stated in the quote email. No VAT display while unregistered.
+No shop, card checkout or customer accounts. **Bank transfer is the only payment method currently available.** Payment instructions are sent privately in the accepted quote/invoice; no bank details are exposed in client-side code. No VAT display while unregistered.
 
 -----
 
@@ -331,13 +332,13 @@ Standard implementation per framework: dynamic meta/OG/Twitter cards, XML sitema
 
 ## 28. Deployment
 
-**Cloudflare Pages** (default, matches framework choice). Monorepo root: repo root; app root: `apps/web`; build command: `pnpm build`; output: `apps/web/build/client`; Functions dir: `apps/web/functions`; D1/KV/R2 bindings via `wrangler.toml`, scoped as above; Turnstile site/secret keys as env vars; Resend + Stripe keys as encrypted env vars; preview deployments per PR, production on `main`.
+**Cloudflare Pages** (default, matches framework choice). Monorepo root: repo root; app root: `apps/web`; build command: `pnpm build`; output: `apps/web/build/client`; Functions dir: `apps/web/functions`; D1/KV/R2 bindings via `wrangler.toml`, scoped as above; Turnstile site/secret keys as env vars; Resend key as an encrypted env var; preview deployments per PR, production on `main`.
 
 -----
 
 ## 29. Portability Notes
 
-D1 → Supabase Postgres; R2 → Supabase Storage; Pages Functions → Netlify Functions if ever migrated; keep Stripe/Resend/Turnstile calls behind `packages/payments`, `packages/email`, and a generic `verifyCaptcha()` adapter so none of it is Cloudflare-locked.
+D1 → Supabase Postgres; R2 → Supabase Storage; Pages Functions → Netlify Functions if ever migrated; keep bank-transfer instructions, Resend and Turnstile calls behind `packages/payments`, `packages/email`, and a generic `verifyCaptcha()` adapter so none of it is Cloudflare-locked.
 
 -----
 
@@ -415,12 +416,10 @@ SITEMAP: Home, /projects (+ /projects/[slug] case studies), /about, /pricing,
 PROJECTS TO FEATURE (label demo builds honestly — "Demo build, live client agreement
 in place" — never presented as the client's real production site):
 - EventStreamHD (eventstreamhd.cam) — streaming platform, custom admin CRUD
-- Bemdproperties (bemdproperties.unconventionalsoccer.workers.dev) — real estate
-  platform, demo build
+- Folder-to-text merger (filescombiner.netlify.app) — private in-browser file utility
 - Fraser James Mobile Hairdresser (jamesfrazer.pages.dev) — UK live client site
 - The Grills Corner (Nigeria) — demo build, label country clearly
 - Home Away Travels (Nigeria) — demo build, label country clearly
-- Unconventional Soccer merch/prompt/giveaway sites — campaign builds
 - Koha ISBD Cataloguing Assistant Plugin (GitHub) — production open-source plugin
 - Sora Streamlit Studio — AI video pipeline, Streamlit
 - n8n workflow repo (LinkedIn Job Hunt Pipeline, WordPress Auto-Poster)
@@ -429,20 +428,20 @@ Study buttons, and (if demo) a visible demo note.
 
 PRICING SECTION (Duke's own client-facing packages — show all 5, highlight
 "Professional" as Most Popular):
-Tier 1 Foundation £499 · Tier 2 Growth £799 · Tier 3 Professional £1,499 (Most
+Tier 1 Foundation £499 · Tier 2 Growth £999 · Tier 3 Professional £1,499 (Most
 Popular) · Tier 4 Premium £1,999 · Tier 5 Custom (quote on application).
 Style pricing cards as terminal windows, not default SaaS pricing table.
 
-CONTACT: buildwithduke@outlook.com, UK phone stub +44 7000 000000, WhatsApp click-to-chat, contact form (name, email, company, project
+CONTACT: buildwithduke@outlook.com, public phone/WhatsApp +234 915 215 1634, WhatsApp click-to-chat, contact form (name, email, company, project
 type, budget range, message) with Turnstile + GDPR consent checkbox, stored in D1,
 Resend email notification + auto-responder.
 
 TECH STACK: Cloudflare Pages + Pages Functions, React Router v7+, TypeScript, Vite,
-pnpm workspaces, Tailwind CSS, shadcn/ui (heavily retokenised — no default shadcn
-look anywhere), Radix primitives, Lucide icons (bracket-wrapped, restyled), Motion
-for scroll/hover/DAEMON animation, Zod, React Hook Form, Drizzle ORM, D1, KV, R2
-(project screenshots + CV PDF), Cloudflare Turnstile, Resend, Stripe Payment Links
-(deposits only, no full checkout, no customer accounts), GA4 or Plausible.
+pnpm workspaces, a bespoke CSS token/component system, Lucide icons
+(bracket-wrapped and restyled), a custom IntersectionObserver/pointer-event motion
+system, D1, KV and R2
+(project screenshots + CV PDF), Cloudflare Turnstile, Resend, bank transfer only
+(private instructions after quote acceptance; no checkout or customer accounts), GA4 or Plausible.
 
 MONOREPO: apps/web (+ apps/web/functions), packages/ui, db, db-adapters
 (cloudflare-d1, supabase), types, validators, email, seo, analytics, payments,
@@ -455,10 +454,10 @@ strategy document.
 
 ADMIN DASHBOARD (/admin, login-gated): manage projects, testimonials, pricing
 tiers, leads (view/export/status), DAEMON command library, business settings.
-shadcn/ui-based, mobile-usable, protected routes, confirmation dialogs on delete.
+custom Terminal-Noir UI, mobile-usable, protected routes, confirmation dialogs on delete.
 
-ANTI-GENERIC REQUIREMENTS: no centred-hero-gradient-blob default; no default
-shadcn component styling anywhere; no purple-blue gradient clichés; at least one
+ANTI-GENERIC REQUIREMENTS: no centred-hero-gradient-blob default; no generic
+component-library styling; no purple-blue gradient clichés; at least one
 deliberately asymmetric/broken-grid section (featured projects grid); a distinctive
 type pairing (JetBrains Mono / Space Mono display + Inter body); custom "terminal
 window" card treatment used for project cards, pricing cards, and testimonials;
@@ -476,12 +475,11 @@ export/delete-on-request capability for leads.
 
 DEPLOYMENT: Cloudflare Pages, monorepo root at repo root, app root apps/web, build
 command pnpm build, output apps/web/build/client, Functions dir apps/web/functions,
-D1/KV/R2 bindings via wrangler.toml, Turnstile/Resend/Stripe keys as encrypted env
+D1/KV/R2 bindings via wrangler.toml, Turnstile/Resend keys as encrypted env
 vars. Document Netlify/Supabase portability path in README.
 
-FOOTER: no external agency credit line (Duke IS buildwithduke) — instead include a
-subtle self-referential line: "// built with agentic AI-assisted development — see
-how: /about", styled small and muted, consistent with the terminal theme.
+FOOTER: no external agency credit line (Duke IS buildwithduke). Show the copyright
+brand as "Build With Duke" and a small terminal-style "// built with ❤️" line.
 
 Deliver a stunning, unmistakably-Duke, production-ready build — this must not be
 mistakable for a generic developer portfolio template with the colours changed.
@@ -491,19 +489,22 @@ mistakable for a generic developer portfolio template with the colours changed.
 
 ## 35. Production Readiness Checklist
 
-- [ ] All sitemap pages built and responsive
-- [ ] DAEMON widget functional, reactive, keyboard-accessible, reduced-motion fallback present
-- [ ] Terminal-Noir design system applied consistently — self-check against Section 1.7 passed
-- [ ] Real project links verified live; demo-labelled projects clearly marked
-- [ ] SEO basics (meta, sitemap, robots.txt, schema) in place
-- [ ] AI SEO Business Facts block present
-- [ ] Local/UK relevance signals present (GBP pricing, UK hours, WhatsApp, phone stub flagged)
-- [ ] Contact form + WhatsApp + email all working, leads stored in D1, notifications firing
-- [ ] Admin dashboard functional: projects/testimonials/pricing/leads/DAEMON commands
-- [ ] Cookie consent banner (opt-in, granular), Privacy/Cookie/Terms pages live
-- [ ] WCAG 2.1 AA pass, Core Web Vitals green
-- [ ] Cloudflare Pages deployment live, env vars/bindings configured
-- [ ] Portability notes documented in README
-- [ ] **CV PDF upload, headshot photo, etc
+- [x] All sitemap pages built and responsive
+- [x] DAEMON functional, reactive, draggable, keyboard-accessible, and reduced-motion aware
+- [x] Terminal-Noir design system applied consistently
+- [x] Retained Linktree project inventory reflected; excluded projects filtered from static and D1 content
+- [x] Real project links verified live; demo-labelled projects clearly marked
+- [x] SEO basics (route meta, sitemap, robots.txt, schema) in place
+- [x] AI SEO Business Facts block present
+- [x] Local/UK relevance signals present (GBP pricing, UK hours, WhatsApp, public phone)
+- [x] Contact form implementation includes Turnstile, D1 storage, Resend notifications, validation and rate limiting
+- [x] Admin dashboard supports projects, testimonials, pricing, leads, posts, settings and DAEMON commands
+- [x] Granular cookie consent plus Privacy/Cookie/Terms pages implemented
+- [x] Keyboard, focus, semantic, contrast and reduced-motion safeguards implemented
+- [x] Root Wrangler build/output configuration checked in for monorepo deployment
+- [x] Portability and production environment instructions documented in README
+- [x] CV PDF, headshot, logo and real project captures included
+
+Deployment bindings and encrypted secrets remain environment-owned Cloudflare settings; the repository fails closed when security-critical production configuration is absent.
 
 ```

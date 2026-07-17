@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 Disallow: /admin
-Sitemap: https://buildwithduke.co.uk/sitemap.xml
+Sitemap: https://buildwithduke.pages.dev/sitemap.xml

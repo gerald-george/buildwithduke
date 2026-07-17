@@ -7,7 +7,15 @@
     "dev": "pnpm --filter @buildwithduke/web dev",
     "build": "pnpm --filter @buildwithduke/web build",
     "typecheck": "pnpm --filter @buildwithduke/web typecheck",
-    "preview": "pnpm --filter @buildwithduke/web preview"
+    "preview": "pnpm --filter @buildwithduke/web preview",
+    "deploy:pages": "pnpm build && pnpm exec wrangler pages deploy --cwd apps/web"
   },
-  "workspaces": ["apps/*", "packages/*", "packages/db-adapters/*"]
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "packages/db-adapters/*"
+  ],
+  "devDependencies": {
+    "wrangler": "^4.112.0"
+  }
 }

@@ -1,2 +1,2 @@
-export interface DepositRequest { client: string; email: string; amountPence: number }
-export interface PaymentAdapter { createDepositLink(input: DepositRequest): Promise<string> }
+export interface PaymentInstructionRequest { client: string; email: string; invoiceReference: string }
+export interface PaymentAdapter { createBankTransferInstructions(input: PaymentInstructionRequest): Promise<string> }

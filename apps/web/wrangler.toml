@@ -2,6 +2,13 @@ name = "buildwithduke"
 compatibility_date = "2026-07-17"
 pages_build_output_dir = "build/client"
 
+# Makes this app configuration self-building when Cloudflare dashboard build
+# fields are empty. Paths are resolved from this app directory.
+[build]
+command = "pnpm build"
+cwd = "../.."
+watch_dir = "apps/web/src"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "buildwithduke"
