@@ -58,7 +58,7 @@ Migration path:
 
 ## Content integrity
 
-Live projects and demo builds are labelled separately. Project outcome figures are presented as Duke's reported results and no client testimonials are invented. Captured project previews are local build assets, so the portfolio does not depend on a third-party screenshot service at runtime.
+Live projects and mockup builds are labelled separately. Project outcome figures are presented as Duke's reported results and no client testimonials are invented. Captured project previews are local build assets, so the portfolio does not depend on a third-party screenshot service at runtime.
 
 ## Security notes
 

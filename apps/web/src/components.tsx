@@ -13,7 +13,12 @@ export function IconBox({ children }: { children: ReactNode }) {
 }
 
 export function Logo() {
-  return <Link className="logo" to="/" aria-label="buildwithduke home"><img src="/logo.png" alt="" width="42" height="42" /></Link>;
+  return <Link className="logo" to="/" aria-label="Build With Duke home">
+    <svg className="brand-mark" aria-hidden="true" width="42" height="42" viewBox="0 0 1080 1080">
+      <use href="/logo.svg#brand-logo" />
+    </svg>
+    <span className="logo-wordmark" aria-hidden="true"><span className="brand-syntax">&lt;</span><span className="brand-build">BUILD</span><span className="brand-with"> WITH </span><span className="brand-duke">DUKE</span><span className="brand-syntax">/&gt;</span></span>
+  </Link>;
 }
 
 const nav = [["Work", "/projects"], ["Services", "/services"], ["About", "/about"], ["Pricing", "/pricing"], ["Contact", "/contact"]];
@@ -115,11 +120,13 @@ export function FAQ({ items }: { items: string[][] }) {
 }
 
 type Log = { id: number; text: string; tone?: string };
-const boot = ["booting daemon v1.4...", "loading personality.sh", "checking signal... online", "hello. type 'help' to begin."];
+const boot = ["booting daemon v2.0...", "loading awareness modules...", "checking signal... online", "hello. type 'help' to begin."];
 
 function Daemon() {
   const [open, setOpen] = useState(false);
   const [dismissed, setDismissed] = useState(false);
+  const [minimized, setMinimized] = useState(false);
+  const [maximized, setMaximized] = useState(false);
   const [logs, setLogs] = useState<Log[]>([]);
   const [command, setCommand] = useState("");
   const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
@@ -172,7 +179,9 @@ function Daemon() {
   useEffect(() => {
     setLogs([]);
     const timers = boot.map((text, i) => window.setTimeout(() => setLogs(old => [...old, { id: i, text, tone: i === 3 ? "green" : undefined }]), 350 + i * 430));
+    timers.push(window.setTimeout(() => addLog(`session: ${window.innerWidth}×${window.innerHeight} · ${new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`), 2250));
     return () => timers.forEach(clearTimeout);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => {
     const onResize = () => {
@@ -254,16 +263,44 @@ function Daemon() {
     sections.forEach(section => observer.observe(section));
     return () => observer.disconnect();
   }, [location.pathname]);
+  useEffect(() => {
+    const onOnline = () => addLog("network restored · online", "green");
+    const onOffline = () => addLog("network changed · offline");
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") addLog("welcome back · session resumed", "green");
+    };
+    const themeObserver = new MutationObserver(() => addLog(`theme changed · ${document.documentElement.dataset.theme || "dark"}`));
+    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    window.addEventListener("online", onOnline);
+    window.addEventListener("offline", onOffline);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      themeObserver.disconnect();
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("offline", onOffline);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const run = (event: FormEvent) => {
     event.preventDefault();
     const value = command.trim().toLowerCase();
     if (!value) return;
+    if (value === "clear") { setLogs([]); setCommand(""); return; }
     addLog(`$ ${value}`, "blue"); setCommand("");
     const replies: Record<string, string> = {
-      help: "commands: whoami · projects · services · pricing · contact · coffee · sudo hire-duke",
+      help: "whoami · status · projects · services · pricing · contact · time · theme · clear · sudo hire-duke",
       whoami: "Duke. Full-stack developer, automation specialist, systems enjoyer.",
       coffee: "status: dangerously well-caffeinated.",
+      status: `${navigator.onLine ? "online" : "offline"} · ${location.pathname} · ${Math.round((scrollY / Math.max(1, document.body.scrollHeight - innerHeight)) * 100)}% explored`,
+      time: new Date().toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" }),
+      date: new Date().toLocaleDateString("en-GB", { dateStyle: "full" }),
+      pwd: location.pathname,
+      ls: "projects/  services/  about/  pricing/  contact/",
+      theme: `current theme: ${document.documentElement.dataset.theme || "dark"}`,
+      hello: "hello. I’m awake and watching the system, not your personal data.",
+      hi: "hi. ask for 'status' or type 'help'.",
     };
     const custom = customCommands[value];
     if (custom) {
@@ -272,19 +309,29 @@ function Daemon() {
       if (custom.action === "link" && custom.target) window.setTimeout(() => window.open(custom.target, "_blank", "noopener,noreferrer"), 350);
     }
     else if (replies[value]) addLog(replies[value], "green");
-    else if (["projects", "services", "pricing", "contact"].includes(value)) { addLog(`opening /${value}...`, "green"); window.setTimeout(() => navigate(`/${value}`), 350); }
-    else if (value === "sudo hire-duke") { addLog("permission granted. good decision.", "green"); window.setTimeout(() => navigate("/contact?intent=hire"), 400); }
+    else if (["projects", "work", "services", "pricing", "contact", "about"].includes(value)) { const target = value === "work" ? "projects" : value; addLog(`opening /${target}...`, "green"); window.setTimeout(() => navigate(`/${target}`), 350); }
+    else if (["sudo hire-duke", "hire duke", "hire-duke"].includes(value)) { addLog("permission granted. good decision.", "green"); window.setTimeout(() => navigate("/contact?intent=hire"), 400); }
     else addLog(`command not found: ${value}. try 'help'.`);
   };
-  if (dismissed) return <button className="daemon-orb" onClick={() => { setDismissed(false); setOpen(true); }} aria-label="Open DAEMON terminal"><Terminal size={20} /></button>;
+  if (dismissed) return <button className="daemon-orb" onClick={() => { setDismissed(false); setMinimized(false); setOpen(true); }} aria-label="Open DAEMON terminal"><Terminal size={20} /></button>;
   const daemonStyle: CSSProperties | undefined = position ? { left: position.x, top: position.y, right: "auto", bottom: "auto" } : undefined;
-  return <aside ref={daemonRef} style={daemonStyle} className={open ? "daemon open" : "daemon"} aria-label="DAEMON interactive terminal">
-    <button className="daemon-mobile-trigger" onClick={() => setOpen(true)}><Terminal size={18} /> <span>DAEMON</span><i>online</i></button>
+  const daemonClass = ["daemon", open ? "open" : "", minimized ? "minimized" : "", maximized ? "maximized" : ""].filter(Boolean).join(" ");
+  return <aside ref={daemonRef} style={daemonStyle} className={daemonClass} aria-label="DAEMON interactive terminal">
+    <button className="daemon-mobile-trigger" onClick={() => { setOpen(true); setMinimized(false); }}><Terminal size={18} /> <span>DAEMON</span><i>online</i></button>
     <div className="daemon-panel">
-      <div className="daemon-bar" role="button" tabIndex={0} aria-label="Move DAEMON terminal. Drag, or use the arrow keys." onPointerDown={beginDrag} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} onKeyDown={nudgeDaemon}><span className="window-dots"><i /><i /><i /></span><strong>DAEMON — drag me</strong><button onClick={() => setDismissed(true)} aria-label="Dismiss terminal"><X size={15} /></button></div>
-      <div className="daemon-logs" aria-live="polite">{logs.map(log => <div className={log.tone || ""} key={log.id}><span>›</span> {log.text}</div>)}<div ref={logEnd} /></div>
-      <form className="daemon-input" onSubmit={run}><label htmlFor="daemon-command">$</label><input id="daemon-command" value={command} onChange={e => setCommand(e.target.value)} placeholder="type a command" autoComplete="off" /><button aria-label="Run command"><Send size={15} /></button></form>
-      <button className="daemon-close-mobile" onClick={() => setOpen(false)}>Close terminal</button>
+      <div className="daemon-bar" role="toolbar" tabIndex={0} aria-label="Move DAEMON terminal. Drag, or use the arrow keys." onPointerDown={beginDrag} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} onKeyDown={nudgeDaemon}>
+        <span className="daemon-controls">
+          <button className="daemon-control daemon-control-close" onClick={() => { setDismissed(true); setMaximized(false); }} aria-label="Close terminal" title="Close" />
+          <button className="daemon-control daemon-control-minimize" onClick={() => { setMinimized(value => !value); setMaximized(false); }} aria-label={minimized ? "Restore terminal" : "Minimize terminal"} title={minimized ? "Restore" : "Minimize"} />
+          <button className="daemon-control daemon-control-maximize" onClick={() => { setMaximized(value => !value); setMinimized(false); }} aria-label={maximized ? "Restore terminal" : "Maximize terminal"} title={maximized ? "Restore" : "Maximize"} />
+        </span>
+        <strong>zsh</strong>
+      </div>
+      <div className="daemon-content">
+        <div className="daemon-logs" aria-live="polite">{logs.map(log => <div className={log.tone || ""} key={log.id}><span>›</span> {log.text}</div>)}<div ref={logEnd} /></div>
+        <form className="daemon-input" onSubmit={run}><label htmlFor="daemon-command">$</label><input id="daemon-command" value={command} onChange={e => setCommand(e.target.value)} placeholder="ask me or type help" autoComplete="off" /><button aria-label="Run command"><Send size={15} /></button></form>
+        <button className="daemon-close-mobile" onClick={() => setOpen(false)}>Close terminal</button>
+      </div>
     </div>
   </aside>;
 }

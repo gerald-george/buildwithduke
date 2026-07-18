@@ -71,7 +71,7 @@ export function RevealHeading({
 }) {
   const Tag = as || "h2";
   const ref = useRef<HTMLHeadingElement>(null);
-  const [started, setStarted] = useState(false);
+  const [started, setStarted] = useState(true);
   const [progress, setProgress] = useState(0);
   const [frame, setFrame] = useState(0);
 
@@ -82,13 +82,7 @@ export function RevealHeading({
       setStarted(true);
       return;
     }
-    const observer = new IntersectionObserver(([entry]) => {
-      if (!entry.isIntersecting) return;
-      setStarted(true);
-      observer.disconnect();
-    }, { rootMargin: "0px 0px -8%", threshold: 0.15 });
-    if (ref.current) observer.observe(ref.current);
-    return () => observer.disconnect();
+    setStarted(true);
   }, [text]);
 
   useEffect(() => {

@@ -27,7 +27,11 @@ const json = <T,>(value: unknown, fallback: T): T => {
   try { return JSON.parse(value) as T; } catch { return fallback; }
 };
 
-const excludedProjectSlugs = new Set(["bemdproperties", "unconventional-soccer", "unconventional-soccer-prompt", "unconventional-soccer-merch"]);
+const mockupLanguage = (value: unknown) => String(value)
+  .replace(/\bDemo\b/g, "Mockup")
+  .replace(/\bdemo\b/g, "mockup");
+
+const excludedProjectSlugs = new Set(["bemdproperties", "unconventional-soccer-prompt", "unconventional-soccer-merch"]);
 
 export function ContentProvider({ children }: { children: ReactNode }) {
   const [remote, setRemote] = useState<ApiPayload>({});
@@ -45,10 +49,10 @@ export function ContentProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<ContentValue>(() => {
     const remoteProjects = (remote.projects || []).map(row => ({
-      slug: String(row.slug), title: String(row.title), eyebrow: String(row.eyebrow || row.category),
-      description: String(row.description), problem: String(row.problem || ""), solution: String(row.solution || ""), result: String(row.result || ""),
+      slug: String(row.slug), title: String(row.title), eyebrow: mockupLanguage(row.eyebrow || row.category),
+      description: mockupLanguage(row.description), problem: mockupLanguage(row.problem || ""), solution: mockupLanguage(row.solution || ""), result: mockupLanguage(row.result || ""),
       stack: json<string[]>(row.stack, []), category: String(row.category) as Project["category"],
-      image: String(row.image || json<string[]>(row.screenshot_r2_keys, ["/logo.png"])[0] || "/logo.png"),
+      image: String(row.image || json<string[]>(row.screenshot_r2_keys, ["/logo.svg"])[0] || "/logo.svg"),
       liveUrl: String(row.live_url || "#"), featured: Boolean(row.featured), demo: Boolean(row.demo_flag),
     })).filter(project => !excludedProjectSlugs.has(project.slug));
     const remoteBySlug = new Map(remoteProjects.map(project => [project.slug, project]));
