@@ -30,6 +30,12 @@ export function Layout({ children }: { children: ReactNode }) {
   usePageMotion(location.pathname);
   useEffect(() => { document.documentElement.dataset.theme = theme; localStorage.setItem("theme", theme); }, [theme]);
   useEffect(() => { setMenu(false); window.scrollTo({ top: 0, behavior: "instant" }); }, [location.pathname]);
+  useEffect(() => {
+    if (!menu || !window.matchMedia("(max-width: 900px)").matches) return;
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = overflow; };
+  }, [menu]);
   return <>
     <a className="skip-link" href="#main">Skip to content</a>
     <header className="site-header">
@@ -107,8 +113,7 @@ const technologies = [
 ] as const;
 
 export function TechTicker() {
-  const sequence = [...technologies, ...technologies];
-  return <div className="stack-ticker" aria-label="Technology stack"><div className="ticker-track">{sequence.map(([Icon, label], index) => <span className="ticker-item" key={`${label}-${index}`} aria-label={index < technologies.length ? label : undefined} aria-hidden={index >= technologies.length} title={label}><Icon /></span>)}</div></div>;
+  return <div className="stack-ticker" aria-label="Technology stack"><div className="ticker-track">{[false, true].map(duplicate => <div className="ticker-group" aria-hidden={duplicate || undefined} key={String(duplicate)}>{technologies.map(([Icon, label]) => <span className="ticker-item" key={label} aria-label={duplicate ? undefined : label} title={label}><Icon /></span>)}</div>)}</div></div>;
 }
 
 export function ProjectVisual({ image, title }: { image: string; title: string }) {
@@ -183,6 +188,12 @@ function Daemon() {
     return () => timers.forEach(clearTimeout);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  useEffect(() => {
+    if (!open || !window.matchMedia("(max-width: 900px)").matches) return;
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = overflow; };
+  }, [open]);
   useEffect(() => {
     const onResize = () => {
       if (window.matchMedia("(max-width: 900px)").matches) setPosition(null);
@@ -317,7 +328,7 @@ function Daemon() {
   const daemonStyle: CSSProperties | undefined = position ? { left: position.x, top: position.y, right: "auto", bottom: "auto" } : undefined;
   const daemonClass = ["daemon", open ? "open" : "", minimized ? "minimized" : "", maximized ? "maximized" : ""].filter(Boolean).join(" ");
   return <aside ref={daemonRef} style={daemonStyle} className={daemonClass} aria-label="DAEMON interactive terminal">
-    <button className="daemon-mobile-trigger" onClick={() => { setOpen(true); setMinimized(false); }}><Terminal size={18} /> <span>DAEMON</span><i>online</i></button>
+    <button className="daemon-mobile-trigger" onClick={() => { setOpen(true); setMinimized(false); }} aria-expanded={open}><Terminal size={18} /> <span>DAEMON</span><i>online</i></button>
     <div className="daemon-panel">
       <div className="daemon-bar" role="toolbar" tabIndex={0} aria-label="Move DAEMON terminal. Drag, or use the arrow keys." onPointerDown={beginDrag} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} onKeyDown={nudgeDaemon}>
         <span className="daemon-controls">
@@ -325,7 +336,7 @@ function Daemon() {
           <button className="daemon-control daemon-control-minimize" onClick={() => { setMinimized(value => !value); setMaximized(false); }} aria-label={minimized ? "Restore terminal" : "Minimize terminal"} title={minimized ? "Restore" : "Minimize"} />
           <button className="daemon-control daemon-control-maximize" onClick={() => { setMaximized(value => !value); setMinimized(false); }} aria-label={maximized ? "Restore terminal" : "Maximize terminal"} title={maximized ? "Restore" : "Maximize"} />
         </span>
-        <strong>zsh</strong>
+        <strong>DAEMON</strong>
       </div>
       <div className="daemon-content">
         <div className="daemon-logs" aria-live="polite">{logs.map(log => <div className={log.tone || ""} key={log.id}><span>›</span> {log.text}</div>)}<div ref={logEnd} /></div>

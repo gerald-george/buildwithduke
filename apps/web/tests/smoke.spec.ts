@@ -10,11 +10,11 @@ test("core routes render without page errors", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1 })).toContainText("I build");
   await page.goto("/projects");
-  await expect(page.getByRole("article")).toHaveCount(9);
+  await expect(page.getByRole("article")).toHaveCount(8);
   await expect(page.getByText("Folder-to-text merger", { exact: true })).toBeVisible();
   await expect(page.getByText("Bemdproperties", { exact: true })).toHaveCount(0);
-  await expect(page.getByText("Unconventional Soccer Giveaway", { exact: true })).toBeVisible();
-  await expect(page.locator('.project-index-card img[src="/projects/unconventional-soccer.png"]')).toBeVisible();
+  await expect(page.getByText("Unconventional Soccer Giveaway", { exact: true })).toHaveCount(0);
+  await expect(page.locator('.project-index-card img[src="/projects/unconventional-soccer.png"]')).toHaveCount(0);
   await page.goto("/contact");
   await expect(page.getByLabel("Email")).toBeVisible();
   await expect(page.getByLabel(/Tell me about it/)).toBeVisible();
@@ -24,7 +24,7 @@ test("core routes render without page errors", async ({ page }) => {
 test("every public route and retained case study mounts cleanly", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", error => errors.push(error.message));
-  for (const route of ["/services", "/about", "/pricing", "/cv", "/blog", "/privacy", "/cookies", "/terms", "/projects/files-combiner", "/projects/unconventional-soccer"]) {
+  for (const route of ["/services", "/about", "/pricing", "/cv", "/blog", "/privacy", "/cookies", "/terms", "/projects/files-combiner"]) {
     await page.goto(route);
     await expect(page.locator("main")).toBeVisible();
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
@@ -48,7 +48,7 @@ test("navigation works at the current viewport", async ({ page, isMobile }) => {
 
 test("DAEMON executes a real navigation command", async ({ page, isMobile }) => {
   await page.goto("/");
-  if (isMobile) await page.getByRole("button", { name: /DAEMON/ }).click();
+  if (isMobile) await page.getByRole("button", { name: /Daemon/i }).click();
   const command = page.getByLabel("$", { exact: true });
   await command.fill("projects");
   await command.press("Enter");
@@ -63,7 +63,26 @@ test("brand wordmark and updated Growth pricing are rendered", async ({ page }) 
   await page.getByRole("button", { name: "Switch to light mode" }).click();
   await expect(page.locator(".brand-mark use").first()).toHaveCSS("fill", "rgb(23, 25, 31)");
   await expect(page.locator(".brand-with").first()).toHaveCSS("color", "rgb(23, 25, 31)");
+  await expect(page.locator(".logo-wordmark").first()).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await expect(page.locator(".logo-wordmark").first()).toHaveCSS("border-top-width", "0px");
   await expect(page.getByText("£999", { exact: true })).toBeVisible();
+});
+
+test("pricing keeps its values and localizes only the currency symbol", async ({ page }) => {
+  await page.route("**/api/currency", route => route.fulfill({ json: { currency: "USD" } }));
+  await page.goto("/pricing");
+  await expect(page.getByText("$999", { exact: true })).toBeVisible();
+  await expect(page.getByText("Showing USD based on your location · values are not converted", { exact: true })).toBeVisible();
+  await expect(page.getByText("£999", { exact: true })).toHaveCount(0);
+});
+
+test("below-fold content reveals when it enters the viewport", async ({ page }) => {
+  await page.goto("/");
+  const heading = page.locator("#work .section-head");
+  await expect(heading).toHaveClass(/reveal-item/);
+  await expect(heading).not.toHaveClass(/is-visible/);
+  await heading.scrollIntoViewIfNeeded();
+  await expect(heading).toHaveClass(/is-visible/);
 });
 
 test("hero typing cursor and logo-only technology ticker render", async ({ page }) => {
@@ -75,6 +94,9 @@ test("hero typing cursor and logo-only technology ticker render", async ({ page 
   await expect(page.locator(".stack-ticker")).toBeVisible();
   await expect(page.locator(".ticker-item svg").first()).toBeVisible();
   await expect(page.locator(".ticker-item b")).toHaveCount(0);
+  await expect(page.locator(".ticker-group")).toHaveCount(2);
+  const tickerWidths = await page.locator(".ticker-group").evaluateAll(groups => groups.map(group => group.getBoundingClientRect().width));
+  expect(tickerWidths[0]).toBeCloseTo(tickerWidths[1], 2);
 });
 
 test("home and project index cards share the same media proportions", async ({ page }) => {
@@ -92,6 +114,7 @@ test("DAEMON can be repositioned with its drag handle", async ({ page, isMobile 
   await page.goto("/");
   const daemon = page.getByLabel("DAEMON interactive terminal");
   const handle = page.locator(".daemon-bar");
+  await expect(handle.locator("strong")).toHaveText("DAEMON");
   const before = await daemon.boundingBox();
   const box = await handle.boundingBox();
   expect(before && box).toBeTruthy();
@@ -101,6 +124,17 @@ test("DAEMON can be repositioned with its drag handle", async ({ page, isMobile 
   await page.mouse.up();
   const after = await daemon.boundingBox();
   expect(after && before && Math.abs(after.x - before.x)).toBeGreaterThan(50);
+});
+
+test("About portrait reveals with glitch layers and CV content reflects source documents", async ({ page }) => {
+  await page.goto("/about");
+  await expect(page.locator(".portrait-media > img")).toHaveCount(2);
+  await expect(page.locator(".portrait-static")).toHaveCount(1);
+  await expect(page.getByText("B.LIS · CGPA 4.6/5.0", { exact: true })).toBeVisible();
+  await page.goto("/cv");
+  await expect(page.getByText("Digital Marketer & Web Manager", { exact: true })).toBeVisible();
+  await expect(page.getByText("Koha ISBD Cataloguing Assistant", { exact: true })).toBeVisible();
+  await expect(page.getByText("Best Graduating Student, Library & Information Science", { exact: true })).toBeVisible();
 });
 
 test("DAEMON window controls minimize, maximize and close", async ({ page, isMobile }) => {

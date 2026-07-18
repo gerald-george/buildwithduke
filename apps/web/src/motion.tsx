@@ -71,18 +71,29 @@ export function RevealHeading({
 }) {
   const Tag = as || "h2";
   const ref = useRef<HTMLHeadingElement>(null);
-  const [started, setStarted] = useState(true);
+  const [started, setStarted] = useState(false);
   const [progress, setProgress] = useState(0);
   const [frame, setFrame] = useState(0);
 
   useEffect(() => {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    setProgress(0);
+    setFrame(0);
     if (reduced || !("IntersectionObserver" in window)) {
       setProgress(text.length);
       setStarted(true);
       return;
     }
-    setStarted(true);
+    setStarted(false);
+    const heading = ref.current;
+    if (!heading) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return;
+      setStarted(true);
+      observer.disconnect();
+    }, { rootMargin: "0px 0px -6%", threshold: 0.12 });
+    observer.observe(heading);
+    return () => observer.disconnect();
   }, [text]);
 
   useEffect(() => {
@@ -107,29 +118,46 @@ export function RevealHeading({
 export function usePageMotion(pathname: string) {
   useEffect(() => {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const targets = Array.from(document.querySelectorAll<HTMLElement>(
-      ".section-head, .terminal-window, .process-step, .proof-list > div, .credential-grid > article, .service-grid > article, .faq-list > details, .legal-copy > section, .blog-grid > article",
-    ));
-
-    targets.forEach((target, index) => {
-      target.classList.add("reveal-item");
-      target.style.setProperty("--reveal-delay", `${Math.min(index % 4, 3) * 70}ms`);
-    });
-
-    if (reduced || !("IntersectionObserver" in window)) {
-      targets.forEach(target => target.classList.add("is-visible"));
-      return;
-    }
-
-    const observer = new IntersectionObserver(entries => {
+    const selector = [
+      ".section-head", ".hero-system", ".terminal-window", ".whoami", ".process-step",
+      ".proof-list > div", ".credential-grid > article", ".service-grid > article",
+      ".faq-list > details", ".legal-copy > section", ".blog-grid > article",
+      ".about-intro > *", ".contact-grid > *", ".cv-layout > *", ".related-grid > a",
+      ".payment-note", ".final-cta .shell", ".footer-grid > div",
+    ].join(", ");
+    const observed = new WeakSet<Element>();
+    const mobile = window.matchMedia("(max-width: 620px)").matches;
+    const observer = reduced || !("IntersectionObserver" in window) ? null : new IntersectionObserver(entries => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
           entry.target.classList.add("is-visible");
-          observer.unobserve(entry.target);
+          observer?.unobserve(entry.target);
         }
       });
-    }, { rootMargin: "0px 0px -7%", threshold: 0.08 });
-    targets.forEach(target => observer.observe(target));
-    return () => observer.disconnect();
+    }, { rootMargin: mobile ? "0px 0px -3%" : "0px 0px -8%", threshold: mobile ? 0.05 : 0.1 });
+
+    const register = (root: ParentNode = document) => {
+      const targets = Array.from(root.querySelectorAll<HTMLElement>(selector));
+      targets.forEach(target => {
+        if (observed.has(target)) return;
+        observed.add(target);
+        const siblings = target.parentElement ? Array.from(target.parentElement.children).filter(child => child.matches(selector)) : [];
+        const index = Math.max(0, siblings.indexOf(target));
+        target.classList.add("reveal-item");
+        target.style.setProperty("--reveal-delay", `${Math.min(index, 3) * (mobile ? 45 : 70)}ms`);
+        if (!observer) target.classList.add("is-visible");
+        else observer.observe(target);
+      });
+    };
+
+    register();
+    const mutations = new MutationObserver(records => records.forEach(record => record.addedNodes.forEach(node => {
+      if (node instanceof HTMLElement) {
+        if (node.matches(selector)) register(node.parentElement || document);
+        register(node);
+      }
+    })));
+    mutations.observe(document.querySelector("main") || document.body, { childList: true, subtree: true });
+    return () => { observer?.disconnect(); mutations.disconnect(); };
   }, [pathname]);
 }

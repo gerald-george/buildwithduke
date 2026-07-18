@@ -59,4 +59,193 @@
 .logo-wordmark .brand-syntax,.logo-wordmark .brand-with{color:var(--brand-contrast)}
 @media(max-width:620px){.logo .brand-mark{width:36px;height:36px}}
 @media(max-width:380px){.logo .brand-mark{display:none}}
-.reveal-item{opacity:1;transform:none}
+
+/* Responsive and motion quality pass. */
+html,body{max-width:100%;overflow-x:clip}
+.logo-wordmark{padding:0;border:0;background:transparent;box-shadow:none;border-radius:0}
+.currency-note{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin:-22px 0 30px;color:var(--muted);font:600 .66rem "JetBrains Mono",monospace}
+.currency-note svg{color:var(--green);flex:none}
+.reveal-item{opacity:0;transform:translate3d(0,26px,0) scale(.992);transition:opacity .68s ease var(--reveal-delay,0ms),transform .72s cubic-bezier(.22,1,.36,1) var(--reveal-delay,0ms);will-change:opacity,transform}
+.reveal-item.is-visible{opacity:1;transform:translate3d(0,0,0) scale(1);will-change:auto}
+.reveal-heading:not(.is-typing) .reveal-output:after{content:none}
+.daemon{max-width:calc(100vw - 36px)}
+.daemon.open{max-width:none}
+.daemon-bar strong{text-transform:none}
+.daemon-mobile-trigger{box-shadow:0 10px 35px rgba(0,0,0,.28)}
+.price-card.popular:hover{transform:translateY(-15px)}
+
+@media(max-width:1100px) and (min-width:901px){
+  .shell{width:min(100% - 48px,1180px)}
+  .hero-inner{gap:5vw}
+  .hero-copy h1{font-size:clamp(3.2rem,6vw,5rem)}
+  .proof-list div{padding:42px}
+  .process-step{padding-inline:19px}
+  .footer-grid{gap:28px}
+}
+
+@media(max-width:900px){
+  .section{padding:96px 0}
+  .site-header{backdrop-filter:blur(18px)}
+  .nav{max-height:calc(100dvh - 65px);overflow:auto;padding:14px 20px 22px;box-shadow:0 18px 40px rgba(0,0,0,.24)}
+  .nav a{min-height:46px;display:flex;align-items:center}
+  .hero-inner{padding-top:72px;gap:54px}
+  .hero-system{justify-self:start}
+  .proof-grid{min-height:0}
+  .whoami{padding:72px 0}
+  .proof-list div{padding:42px}
+  .pricing-full .price-card:last-child{grid-column:1/-1}
+  .footer-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .footer-grid>div:last-child{display:flex}
+  .footer-bottom{padding-right:0;gap:24px;flex-wrap:wrap}
+  .daemon{z-index:200;max-width:none}
+  .daemon.open{position:fixed!important;inset:0!important;align-items:end;padding-top:65px;background:rgba(0,0,0,.72);backdrop-filter:blur(5px)}
+  .daemon.open .daemon-panel{max-height:min(78dvh,680px);border:0;border-top:1px solid #343841;border-radius:12px 12px 0 0;padding-bottom:env(safe-area-inset-bottom)}
+  .daemon.open .daemon-logs{height:min(48dvh,430px)}
+  .daemon-bar{cursor:default}
+  .price-card.popular:hover{transform:translateY(-12px)}
+}
+
+@media(max-width:760px){
+  .about-intro{grid-template-columns:1fr}
+  .portrait-frame{width:min(100%,520px)}
+  .cv-layout{grid-template-columns:1fr}
+  .cv-layout>aside{position:static;border-right:0;border-bottom:1px solid var(--line);padding:0 0 42px}
+}
+
+@media(max-width:620px){
+  .shell{width:min(100% - 32px,1180px)}
+  .section{padding:76px 0}
+  h1{font-size:clamp(2.4rem,12vw,3.2rem)}
+  h2{font-size:clamp(2rem,10vw,2.6rem);overflow-wrap:anywhere}
+  .header-inner{height:64px;gap:11px}
+  .logo{min-width:0;gap:7px}
+  .logo-wordmark{font-size:clamp(.55rem,2.7vw,.63rem);white-space:nowrap}
+  .header-actions{gap:5px}
+  .icon-button{width:36px;height:36px}
+  .nav{top:64px;padding-inline:16px}
+  .hero{min-height:0}
+  .hero-inner{padding:64px 0 58px;gap:42px}
+  .hero-copy h1{font-size:clamp(2.45rem,11.5vw,3.15rem);margin:20px 0}
+  .hero-copy>p{font-size:.98rem;line-height:1.7}
+  .availability{font-size:.61rem;max-width:100%}
+  .hero-copy .button-row{margin-top:26px}
+  .hero-copy .button-row .button,.final-cta .button-row .button{width:100%}
+  .hero-meta{margin-top:25px}
+  .hero-system{width:100%}
+  .system-stats span{line-height:1.35;display:block}
+  .stack-ticker{height:56px}
+  .section-head{margin-bottom:32px}
+  .project-card-body{padding:21px 18px}
+  .card-actions{gap:16px;flex-wrap:wrap}
+  .section-end{justify-content:flex-start;margin-top:34px}
+  .whoami{padding:60px 0}
+  .proof-list div{padding:32px 16px}
+  .process-step{padding:28px 20px}
+  .process-step h3{margin-top:28px}
+  .price-body{padding:25px 20px}
+  .price-card.popular{margin-top:20px}
+  .price-card.popular:hover{transform:none}
+  .currency-note{justify-content:flex-start;margin:-14px 0 28px;font-size:.61rem}
+  .page-hero{padding:124px 0 62px}
+  .page-hero h1{font-size:clamp(2.5rem,11.5vw,3.25rem);overflow-wrap:anywhere}
+  .page-hero p{font-size:.96rem}
+  .filter-bar{margin:0 -16px 36px;padding:0 16px 9px;scrollbar-width:none}
+  .filter-bar::-webkit-scrollbar{display:none}
+  .case-hero{padding:118px 0 65px}
+  .back-link{margin-bottom:38px}
+  .case-copy section{padding-bottom:62px}
+  .service-grid article{padding:30px 20px}
+  .service-callout{gap:24px}
+  .payment-note{align-items:flex-start;margin-top:48px;padding:20px 17px}
+  .faq-list summary{gap:14px;padding:20px 0;font-size:.9rem}
+  .faq-list summary span{gap:11px}
+  .faq-list p{padding:0 0 20px 29px}
+  .contact-form{padding:25px 17px}
+  .contact-lines{padding:8px}
+  .contact-lines>a,.contact-lines>div{min-width:0;padding:14px 8px;gap:11px}
+  .contact-lines span{min-width:0;overflow-wrap:anywhere}
+  .final-cta{padding:78px 0}
+  .footer{padding-top:56px}
+  .footer-grid{grid-template-columns:1fr 1fr;gap:34px 20px}
+  .footer-grid>div:first-child{grid-column:1/-1}
+  .business-facts{margin-top:35px}
+  .footer-bottom{margin-top:35px;align-items:flex-start}
+  .reveal-item{transform:translate3d(0,17px,0);transition-duration:.56s,.62s}
+  .daemon{right:12px;bottom:max(12px,env(safe-area-inset-bottom))}
+  .daemon-mobile-trigger{height:44px;padding:0 11px}
+  .daemon.open .daemon-panel{max-height:82dvh}
+  .daemon.open .daemon-logs{height:50dvh}
+}
+
+@media(max-width:390px){
+  .logo .brand-mark{display:none}
+  .header-inner{gap:8px}
+  .logo-wordmark{font-size:.59rem}
+  .hero-copy h1{font-size:2.38rem}
+  .system-output>div{grid-template-columns:52px minmax(0,1fr)}
+  .system-stats strong{font-size:.95rem}
+  .footer-grid{grid-template-columns:1fr}
+  .footer-grid>div:first-child{grid-column:auto}
+}
+
+@media(hover:none){
+  .button:hover,.project-card:hover,.project-index-card:hover,.price-card:hover,.service-grid article:hover,.related-grid a:hover{transform:none}
+}
+
+@media(prefers-reduced-motion:reduce){
+  .reveal-item,.reveal-item.is-visible{opacity:1;transform:none;transition:none;will-change:auto}
+}
+
+/* Seamless technology loop and About portrait signal reveal. */
+.ticker-track{display:flex;gap:0;transform:translate3d(0,0,0);animation:ticker 30s linear infinite!important}
+.ticker-group{display:flex;flex:none;align-items:center;gap:0;word-spacing:normal!important;animation:none!important}
+@keyframes ticker{from{transform:translate3d(0,0,0)}to{transform:translate3d(-50%,0,0)}}
+
+.portrait-frame{overflow:hidden;transition:border-color .28s ease,box-shadow .28s ease}
+.portrait-frame:after{content:none}
+.portrait-media{position:relative;overflow:hidden;isolation:isolate;background:var(--panel-2)}
+.portrait-media>img{display:block;width:100%;height:auto;transition:transform .55s cubic-bezier(.22,1,.36,1),filter .35s ease;animation:portrait-reveal 1.25s steps(1) both}
+.portrait-frame .portrait-glitch{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0;pointer-events:none;mix-blend-mode:screen;filter:grayscale(1) contrast(1.25) hue-rotate(155deg);animation:portrait-glitch-in 1.25s steps(1) both}
+.portrait-static{position:absolute;z-index:2;inset:0;pointer-events:none;background:repeating-radial-gradient(circle at 35% 40%,rgba(255,255,255,.28) 0 1px,transparent 1px 4px),repeating-linear-gradient(0deg,rgba(255,255,255,.12) 0 1px,rgba(0,0,0,.1) 1px 3px);background-size:7px 7px,100% 4px;mix-blend-mode:overlay;animation:portrait-static-clear 1.25s steps(1) both}
+.portrait-status{z-index:3}
+.portrait-frame:hover{border-color:color-mix(in srgb,var(--green) 65%,var(--line));box-shadow:0 22px 65px rgba(0,0,0,.28),0 0 0 1px color-mix(in srgb,var(--green) 18%,transparent)}
+.portrait-frame:hover .portrait-media>img:first-child{transform:scale(1.035);filter:grayscale(.15) contrast(1.08)}
+.portrait-frame:hover .portrait-glitch{animation:portrait-glitch-hover .72s steps(1)}
+.portrait-frame:hover .portrait-static{animation:portrait-static-hover .72s steps(1)}
+
+.cv-entry-detail{align-items:flex-start;gap:34px}
+.cv-entry-detail>div{max-width:620px}
+.cv-entry-detail p{margin:7px 0 0;font-size:.84rem}
+.cv-entry-detail>span{flex:0 0 235px;text-align:right;line-height:1.65}
+
+@keyframes portrait-reveal{
+  0%{opacity:0;filter:grayscale(1) brightness(.15) contrast(2);clip-path:inset(0 0 100% 0)}
+  14%{opacity:.35;clip-path:inset(64% 0 18% 0);transform:translateX(-4px)}
+  28%{opacity:.7;clip-path:inset(18% 0 52% 0);transform:translateX(5px)}
+  43%{opacity:.48;clip-path:inset(44% 0 23% 0);transform:translateX(-2px)}
+  61%{opacity:.9;clip-path:inset(8% 0 10% 0)}
+  78%{opacity:1;filter:grayscale(.6) contrast(1.18);clip-path:inset(0);transform:translateX(0)}
+  100%{opacity:1;filter:grayscale(1) contrast(1.05);clip-path:inset(0);transform:none}
+}
+@keyframes portrait-glitch-in{
+  0%,12%,32%,52%,72%,100%{opacity:0;transform:none;clip-path:inset(0)}
+  13%{opacity:.8;transform:translateX(9px);clip-path:inset(64% 0 18% 0)}
+  33%{opacity:.65;transform:translateX(-8px);clip-path:inset(19% 0 55% 0)}
+  53%{opacity:.55;transform:translateX(6px);clip-path:inset(43% 0 27% 0)}
+  73%{opacity:.3;transform:translateX(-3px);clip-path:inset(7% 0 80% 0)}
+}
+@keyframes portrait-static-clear{0%{opacity:.95}18%{opacity:.65}36%{opacity:.9}55%{opacity:.35}72%{opacity:.18}88%,100%{opacity:0}}
+@keyframes portrait-glitch-hover{0%,100%{opacity:0;transform:none}16%{opacity:.6;transform:translateX(7px);clip-path:inset(12% 0 68% 0)}32%{opacity:0}52%{opacity:.45;transform:translateX(-6px);clip-path:inset(62% 0 17% 0)}70%{opacity:0}84%{opacity:.32;transform:translateX(4px);clip-path:inset(39% 0 45% 0)}}
+@keyframes portrait-static-hover{0%,100%{opacity:0}15%{opacity:.28}32%{opacity:.04}52%{opacity:.2}68%{opacity:0}}
+
+@media(max-width:620px){
+  .cv-entry-detail{gap:12px}
+  .cv-entry-detail>span{flex:auto;text-align:left}
+}
+
+@media(prefers-reduced-motion:reduce){
+  .ticker-track{animation:none!important}
+  .portrait-media>img{animation:none}
+  .portrait-frame .portrait-glitch,.portrait-static{display:none;animation:none}
+  .portrait-frame:hover .portrait-media>img:first-child{transform:none}
+}
