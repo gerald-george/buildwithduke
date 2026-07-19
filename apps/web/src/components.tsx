@@ -4,9 +4,8 @@ import { ArrowUpRight, Check, ChevronDown, Cookie, Github, Instagram, Linkedin, 
 import { SiClaude, SiCloudflare, SiDrizzle, SiN8N, SiNextdotjs, SiNodedotjs, SiReact, SiTypescript, SiVite } from "react-icons/si";
 import { TbBrandOpenai } from "react-icons/tb";
 import { RevealHeading, usePageMotion } from "./motion";
-import { CONTACT_EMAIL, GITHUB_URL, INSTAGRAM_URL, LINKEDIN_URL, PHONE_DISPLAY, WHATSAPP_URL, businessFacts } from "./site";
-
-export const WA_URL = WHATSAPP_URL;
+import { useContent } from "./content";
+import { businessFacts } from "./site";
 
 export function IconBox({ children }: { children: ReactNode }) {
   return <span className="icon-box" aria-hidden="true">{children}</span>;
@@ -29,6 +28,7 @@ export function Layout({ children }: { children: ReactNode }) {
   const location = useLocation();
   usePageMotion(location.pathname);
   useEffect(() => { document.documentElement.dataset.theme = theme; localStorage.setItem("theme", theme); }, [theme]);
+  useEffect(() => { const update = (event: Event) => setTheme(String((event as CustomEvent<string>).detail)); window.addEventListener("daemon-theme", update); return () => window.removeEventListener("daemon-theme", update); }, []);
   useEffect(() => { setMenu(false); window.scrollTo({ top: 0, behavior: "instant" }); }, [location.pathname]);
   useEffect(() => {
     if (!menu || !window.matchMedia("(max-width: 900px)").matches) return;
@@ -86,15 +86,17 @@ function ConsentAnalytics() {
 }
 
 function Footer() {
+  const { settings } = useContent();
+  const whatsappUrl = `https://wa.me/${settings.whatsapp_number.replace(/\D/g, "")}?text=${encodeURIComponent("Hi Duke, I found your site and want to talk about a project.")}`;
   return <footer className="footer">
     <div className="shell footer-grid">
       <div><Logo /><p className="muted">Full-stack products and useful automation.<br />Remote · UK-wide.</p></div>
       <div><span className="kicker">Go somewhere</span>{nav.slice(0, 4).map(([label, href]) => <Link key={href} to={href}>{label}</Link>)}</div>
-      <div><span className="kicker">Start a conversation</span><a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a><a href={WA_URL} target="_blank" rel="noreferrer">WhatsApp · {PHONE_DISPLAY} <ArrowUpRight size={14} /></a></div>
-      <div><span className="kicker">Find me</span><a href={GITHUB_URL} target="_blank" rel="noreferrer"><Github size={15} /> GitHub</a><a href={INSTAGRAM_URL} target="_blank" rel="noreferrer"><Instagram size={15} /> Instagram</a><a href={LINKEDIN_URL} target="_blank" rel="noreferrer"><Linkedin size={15} /> LinkedIn</a></div>
+      <div><span className="kicker">Start a conversation</span><a href={`mailto:${settings.contact_email}`}>{settings.contact_email}</a><a href={whatsappUrl} target="_blank" rel="noreferrer">WhatsApp · {settings.phone_display} <ArrowUpRight size={14} /></a></div>
+      <div><span className="kicker">Find me</span><a href={settings.github_url} target="_blank" rel="noreferrer"><Github size={15} /> GitHub</a><a href={settings.instagram_url} target="_blank" rel="noreferrer"><Instagram size={15} /> Instagram</a><a href={settings.linkedin_url} target="_blank" rel="noreferrer"><Linkedin size={15} /> LinkedIn</a></div>
     </div>
-    <div className="shell business-facts" aria-label="Business facts"><span>{businessFacts.name} · {businessFacts.industry}</span><span>{businessFacts.areaServed} · {businessFacts.hours}</span><span>{businessFacts.paymentMethods}</span></div>
-    <div className="shell footer-bottom"><span>© {new Date().getFullYear()} Build With Duke</span><span><Link to="/privacy">Privacy</Link> · <Link to="/cookies">Cookies</Link> · <Link to="/terms">Terms</Link> · <button className="footer-preferences" onClick={() => window.dispatchEvent(new Event("open-cookie-preferences"))}>Cookie preferences</button></span><Link className="built-with-love" to="/about">// built with <span role="img" aria-label="love">❤️</span></Link></div>
+    <div className="shell business-facts" aria-label="Business facts"><span>{settings.business_name} · {businessFacts.industry}</span><span>{settings.service_area} · {businessFacts.hours}</span><span>{businessFacts.paymentMethods}</span></div>
+    <div className="shell footer-bottom"><span>© {new Date().getFullYear()} {settings.business_name}</span><span><Link to="/privacy">Privacy</Link> · <Link to="/cookies">Cookies</Link> · <Link to="/terms">Terms</Link> · <button className="footer-preferences" onClick={() => window.dispatchEvent(new Event("open-cookie-preferences"))}>Cookie preferences</button></span><Link className="built-with-love" to="/about">// built with <span role="img" aria-label="love">❤️</span></Link></div>
   </footer>;
 }
 
@@ -318,6 +320,7 @@ function Daemon() {
       addLog(custom.response, "green");
       if (custom.action === "navigate" && custom.target) window.setTimeout(() => navigate(custom.target!), 350);
       if (custom.action === "link" && custom.target) window.setTimeout(() => window.open(custom.target, "_blank", "noopener,noreferrer"), 350);
+      if (custom.action === "theme" && ["light", "dark"].includes(custom.target || "")) window.setTimeout(() => window.dispatchEvent(new CustomEvent("daemon-theme", { detail: custom.target })), 150);
     }
     else if (replies[value]) addLog(replies[value], "green");
     else if (["projects", "work", "services", "pricing", "contact", "about"].includes(value)) { const target = value === "work" ? "projects" : value; addLog(`opening /${target}...`, "green"); window.setTimeout(() => navigate(`/${target}`), 350); }
@@ -378,5 +381,7 @@ function CookieConsent() {
 }
 
 export function WhatsAppLink({ children = "Message on WhatsApp", className = "button button-secondary" }: { children?: ReactNode; className?: string }) {
-  return <a className={className} href={WA_URL} target="_blank" rel="noreferrer"><MessageCircle size={17} />{children}</a>;
+  const { settings } = useContent();
+  const url = `https://wa.me/${settings.whatsapp_number.replace(/\D/g, "")}?text=${encodeURIComponent("Hi Duke, I found your site and want to talk about a project.")}`;
+  return <a className={className} href={url} target="_blank" rel="noreferrer"><MessageCircle size={17} />{children}</a>;
 }

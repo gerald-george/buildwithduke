@@ -25,10 +25,10 @@ Use the repository root as the build root.
 
 - Build command: `pnpm build`
 - Build output: `apps/web/build/client`
-- Functions directory: `apps/web/functions`
+- Functions directory: `functions` when the Pages project root is the repository root
 - Node version: `22`
 
-The root `wrangler.toml` also declares the monorepo build command and output path, so Wrangler-driven builds do not depend on duplicated dashboard build fields. For an explicit CLI deployment, run `pnpm deploy:pages`; it builds first, then deploys from the app directory so Pages Functions are discovered alongside the app-level binding configuration.
+Cloudflare Pages does not support a `[build]` section in `wrangler.toml`, so keep the build command and root directory in the Pages dashboard. The root `wrangler.toml` declares the output path and production bindings. For an explicit CLI deployment, run `pnpm deploy:pages`; it builds first and deploys `apps/web/build/client`. Matching handlers remain under both `functions` and `apps/web/functions` so repository-root and app-directory Pages workflows behave consistently.
 
 Create the infrastructure, replace the placeholder binding IDs in `apps/web/wrangler.toml`, then apply both schema migrations in order:
 
@@ -43,7 +43,9 @@ Configure `TURNSTILE_SECRET_KEY`, `RESEND_API_KEY`, `ADMIN_PASSWORD_HASH`, `ADMI
 
 The public WhatsApp number and GitHub organisation match Duke’s current public profiles. The included headshot, logo, project captures and concise CV PDF are served locally, so the public portfolio has no media-service dependency. Replace the concise PDF with Duke’s final long-form CV whenever it is available.
 
-The admin password is never stored as plaintext. Store a `sha256:`-prefixed SHA-256 digest in `ADMIN_PASSWORD_HASH`; the session signing secret should be at least 32 random bytes. The admin UI provides protected CRUD for projects, testimonials, pricing, leads, build-log posts, DAEMON commands, and business settings. Login attempts are rate-limited through the `CACHE` KV binding, mutations require a per-session CSRF token, and cookies are HttpOnly, Secure, SameSite Strict, and expire after eight hours.
+The admin password is never stored as plaintext. Store a `sha256:`-prefixed SHA-256 digest in `ADMIN_PASSWORD_HASH`; the session signing secret should be at least 32 random bytes. The professional admin workspace provides an activity overview, searchable and filtered records, purpose-built fields, media upload and preview, project metrics and tag builders, lead status management and CSV export, pricing and testimonial workflows, DAEMON controls, and an approved public-settings editor. Articles use the free MIT-licensed Tiptap WYSIWYG editor, publish to dedicated article routes, and are sanitized with DOMPurify before public rendering. Login attempts are rate-limited through the `CACHE` KV binding, mutations require a per-session CSRF token, and cookies are HttpOnly, Secure, SameSite Strict, and expire after eight hours.
+
+Public business settings are deliberately allowlisted: business name, contact email, phone details, WhatsApp number, service area, response time, social profile URLs, and project availability. They must never contain private payment instructions or secrets.
 
 ## Data and adapters
 

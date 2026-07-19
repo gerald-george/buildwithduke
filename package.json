@@ -8,7 +8,7 @@
     "build": "pnpm --filter @buildwithduke/web build",
     "typecheck": "pnpm --filter @buildwithduke/web typecheck",
     "preview": "pnpm --filter @buildwithduke/web preview",
-    "deploy:pages": "pnpm build && pnpm exec wrangler pages deploy --cwd apps/web"
+    "deploy:pages": "pnpm build && pnpm exec wrangler pages deploy apps/web/build/client"
   },
   "workspaces": [
     "apps/*",

@@ -1,9 +1,14 @@
 import { ReactNode, createContext, useContext, useEffect, useMemo, useState } from "react";
 import { Project, pricing as fallbackPricing, projects as fallbackProjects } from "./data";
+import { CONTACT_EMAIL, GITHUB_URL, INSTAGRAM_URL, LINKEDIN_URL, PHONE_DISPLAY, PHONE_NUMBER } from "./site";
 
 export type PricingTier = (typeof fallbackPricing)[number];
 export type Testimonial = { id: string; authorName: string; authorRole?: string; company?: string; quote: string };
 export type BlogPost = { id: string; slug: string; title: string; excerpt: string; body?: string; publishedAt?: string };
+export type SiteSettings = {
+  business_name: string; contact_email: string; phone_number: string; phone_display: string; whatsapp_number: string;
+  service_area: string; response_time: string; github_url: string; instagram_url: string; linkedin_url: string; accepting_projects: string;
+};
 
 type ContentValue = {
   projects: Project[];
@@ -11,6 +16,7 @@ type ContentValue = {
   currency: Currency;
   testimonials: Testimonial[];
   blogPosts: BlogPost[];
+  settings: SiteSettings;
   loading: boolean;
 };
 
@@ -19,13 +25,20 @@ export type Currency = "GBP" | "USD" | "EUR";
 const symbols: Record<Currency, string> = { GBP: "£", USD: "$", EUR: "€" };
 const localizePrice = (price: string, currency: Currency) => /^£[\d,]+$/.test(price) ? `${symbols[currency]}${price.slice(1)}` : price;
 
-const ContentContext = createContext<ContentValue>({ projects: fallbackProjects, pricing: fallbackPricing, currency: "GBP", testimonials: [], blogPosts: [], loading: false });
+const defaultSettings: SiteSettings = {
+  business_name: "Build With Duke", contact_email: CONTACT_EMAIL, phone_number: PHONE_NUMBER, phone_display: PHONE_DISPLAY,
+  whatsapp_number: PHONE_NUMBER, service_area: "Remote · UK-wide", response_time: "within 24 hours, UK time",
+  github_url: GITHUB_URL, instagram_url: INSTAGRAM_URL, linkedin_url: LINKEDIN_URL, accepting_projects: "true",
+};
+
+const ContentContext = createContext<ContentValue>({ projects: fallbackProjects, pricing: fallbackPricing, currency: "GBP", testimonials: [], blogPosts: [], settings: defaultSettings, loading: false });
 
 type ApiPayload = {
   projects?: Array<Record<string, unknown>>;
   pricing?: Array<Record<string, unknown>>;
   testimonials?: Array<Record<string, unknown>>;
   blogPosts?: Array<Record<string, unknown>>;
+  settings?: Array<Record<string, unknown>>;
 };
 
 const json = <T,>(value: unknown, fallback: T): T => {
@@ -54,9 +67,8 @@ export function ContentProvider({ children }: { children: ReactNode }) {
     const controller = new AbortController();
     fetch("/api/content", { signal: controller.signal })
       .then(response => response.ok ? response.json() : Promise.reject())
-      .then((payload: ApiPayload) => setRemote(payload))
-      .catch(() => undefined)
-      .finally(() => setLoading(false));
+      .then((payload: ApiPayload) => { setRemote(payload); setLoading(false); })
+      .catch(() => setLoading(false));
     fetch("/api/currency", { signal: controller.signal })
       .then(response => response.ok ? response.json() : Promise.reject())
       .then((payload: { currency?: string }) => {
@@ -85,7 +97,8 @@ export function ContentProvider({ children }: { children: ReactNode }) {
     })) : fallbackPricing.map(tier => ({ ...tier, price: localizePrice(tier.price, currency) }));
     const testimonials = (remote.testimonials || []).map(row => ({ id: String(row.id), authorName: String(row.author_name), authorRole: String(row.author_role || ""), company: String(row.company || ""), quote: String(row.quote) }));
     const blogPosts = (remote.blogPosts || []).map(row => ({ id: String(row.id), slug: String(row.slug), title: String(row.title), excerpt: String(row.excerpt || ""), body: String(row.body || ""), publishedAt: String(row.published_at || "") }));
-    return { projects, pricing, currency, testimonials, blogPosts, loading };
+    const settings = { ...defaultSettings, ...Object.fromEntries((remote.settings || []).map(row => [String(row.key), String(row.value)])) } as SiteSettings;
+    return { projects, pricing, currency, testimonials, blogPosts, settings, loading };
   }, [remote, loading, currency]);
 
   return <ContentContext.Provider value={value}>{children}</ContentContext.Provider>;
