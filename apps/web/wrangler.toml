@@ -3,13 +3,13 @@ compatibility_date = "2026-07-17"
 pages_build_output_dir = "build/client"
 
 # Cloudflare Pages does not support a [build] section in wrangler.toml.
-# Set the build command ("pnpm build") and root directory ("../..") in the
+# Set the build command ("pnpm build") and root directory ("apps/web") in the
 # Pages dashboard's build settings instead.
 
 [[d1_databases]]
 binding = "DB"
 database_name = "buildwithduke"
-database_id = "replace-after-wrangler-d1-create"
+database_id = "127728b6-43cc-4c27-bc5a-ec706bfe23a6"
 
 [[r2_buckets]]
 binding = "MEDIA"
@@ -17,4 +17,4 @@ bucket_name = "buildwithduke-media"
 
 [[kv_namespaces]]
 binding = "CACHE"
-id = "replace-after-kv-create"
+id = "2a3db58602c245868c92c5f1352229ad"

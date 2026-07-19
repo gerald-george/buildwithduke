@@ -332,7 +332,7 @@ Standard implementation per framework: dynamic meta/OG/Twitter cards, XML sitema
 
 ## 28. Deployment
 
-**Cloudflare Pages** (default, matches framework choice). Monorepo root: repo root; app root: `apps/web`; build command: `pnpm build`; output: `apps/web/build/client`; Functions dir: `apps/web/functions`; D1/KV/R2 bindings via `wrangler.toml`, scoped as above; Turnstile and the Google Apps Script relay values are encrypted environment variables; preview deployments per PR, production on `main`.
+**Cloudflare Pages** (default, matches framework choice). Project root: `apps/web`; build command: `pnpm build`; output: `build/client`; Functions dir: `functions`; D1/KV/R2 bindings via `apps/web/wrangler.toml`, scoped as above; Turnstile and the Google Apps Script relay values are encrypted environment variables; preview deployments per PR, production on `main`.
 
 -----
 
@@ -473,9 +473,9 @@ UK GDPR: opt-in granular cookie consent (Necessary/Analytics/Marketing) styled i
 theme, Privacy/Cookie/Terms pages, GDPR consent notice on contact form, admin
 export/delete-on-request capability for leads.
 
-DEPLOYMENT: Cloudflare Pages, monorepo root at repo root, app root apps/web, build
-command pnpm build, output apps/web/build/client, Functions dir apps/web/functions,
-D1/KV/R2 bindings via wrangler.toml, Turnstile and contact-relay values as encrypted env
+DEPLOYMENT: Cloudflare Pages, project root apps/web, build command pnpm build,
+output build/client, Functions dir functions, D1/KV/R2 bindings via
+apps/web/wrangler.toml, Turnstile and contact-relay values as encrypted env
 vars. Document Netlify/Supabase portability path in README.
 
 FOOTER: no external agency credit line (Duke IS buildwithduke). Show the copyright

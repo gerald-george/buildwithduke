@@ -1,7 +1,0 @@
-name = "buildwithduke"
-compatibility_date = "2026-07-17"
-pages_build_output_dir = "apps/web/build/client"
-
-# Cloudflare Pages does not support a [build] section in wrangler.toml.
-# Set the build command ("pnpm build") and root directory (".") in the
-# Pages dashboard's build settings instead.

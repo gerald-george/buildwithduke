@@ -21,16 +21,16 @@ Output: `apps/web/build/client`.
 
 ## Cloudflare Pages
 
-Use the repository root as the build root.
+Use `apps/web` as the Cloudflare Pages build root.
 
 - Build command: `pnpm build`
-- Build output: `apps/web/build/client`
-- Functions directory: `functions` when the Pages project root is the repository root
+- Build output: `build/client`
+- Functions directory: `functions` (resolved from `apps/web/functions`)
 - Node version: `22`
 
-Cloudflare Pages does not support a `[build]` section in `wrangler.toml`, so keep the build command and root directory in the Pages dashboard. The root `wrangler.toml` declares the output path. For an explicit CLI deployment, run `pnpm deploy:pages`; it builds first and deploys `apps/web/build/client`. The canonical handlers live under `apps/web/functions`; thin re-exports under `functions` keep repository-root and app-directory Pages workflows in sync.
+Cloudflare Pages does not support a `[build]` section in `wrangler.toml`, so keep the build command and root directory in the Pages dashboard. The app-local `apps/web/wrangler.toml` declares the output path and production bindings. For an explicit CLI deployment from the repository root, run `pnpm deploy:pages`; it builds first and runs Wrangler from `apps/web`. All Pages handlers live under `apps/web/functions`.
 
-Create the infrastructure, replace the placeholder binding IDs in `apps/web/wrangler.toml`, then apply all schema migrations in order:
+The production binding IDs are configured in `apps/web/wrangler.toml`. To provision replacement infrastructure, create it and then apply all schema migrations in order from the repository root:
 
 ```bash
 pnpm dlx wrangler d1 create buildwithduke

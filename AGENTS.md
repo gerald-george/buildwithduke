@@ -11,12 +11,12 @@
 ## Project layout
 
 - `apps/web/src`: React/Vite application, including the protected admin workspace.
-- `apps/web/functions`: Cloudflare Pages Functions used by app-directory workflows.
-- `functions`: matching Cloudflare Pages Functions used when the repository root is the Pages project root.
+- `apps/web/functions`: Cloudflare Pages Functions for the app-local Pages project.
+- `apps/web/wrangler.toml`: the sole Wrangler configuration, including production resource bindings.
 - `packages/db/migrations`: ordered D1 schema migrations.
 - `apps/web/build/client`: generated production output; do not commit it.
 
-Until the Cloudflare project is consolidated around one root convention, keep matching handlers under `apps/web/functions` and `functions` in sync. The checked-in root `wrangler.toml` is for repository-root builds; `apps/web/wrangler.toml` supports commands run from the web app.
+The Cloudflare Pages project root is `apps/web`. Keep Pages Functions and Cloudflare configuration there; do not recreate repository-root `functions` or `wrangler.toml` copies.
 
 ## Working conventions
 
@@ -41,6 +41,7 @@ git diff --check
 ## Deployment
 
 - Cloudflare Pages build command: `pnpm build`
-- Build output directory: `apps/web/build/client`
+- Cloudflare Pages root directory: `apps/web`
+- Build output directory: `build/client` (relative to the Pages root)
 - CLI deploy command: `pnpm deploy:pages`
 - GitHub deployments target `origin/main` at the canonical repository above.
