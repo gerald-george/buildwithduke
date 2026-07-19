@@ -168,7 +168,7 @@ test("contact fast-lane copy and business facts have responsive structure", asyn
   await expect(note.locator("strong")).toHaveCSS("display", "block");
   const facts = page.locator(".business-facts");
   await expect(facts.getByText("Full-stack web development and AI automation consultancy", { exact: true })).toBeVisible();
-  await expect(facts.getByText("Monday–Friday, 09:00–18:00 GMT/BST", { exact: true })).toBeVisible();
+  await expect(facts.getByText("Monday–Sunday, 09:00–22:59 GMT/BST", { exact: true })).toBeVisible();
   await expect(facts.getByText("Bank transfer only", { exact: true })).toBeVisible();
 });
 
@@ -207,6 +207,14 @@ test("authenticated admin uses friendly forms and a rich article editor", async 
   await expect(page.getByRole("toolbar", { name: "Article formatting" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Bold" })).toBeVisible();
   await expect(page.locator(".rich-editor .tiptap")).toBeVisible();
+});
+
+test("admin turns non-JSON Function failures into an actionable error", async ({ page }) => {
+  await page.route("**/api/admin/session", route => route.fulfill({ json: { ok: true, csrf: "test-csrf" } }));
+  await page.route("**/api/admin/data?module=overview", route => route.fulfill({ status: 500, contentType: "text/plain", body: "Internal Server Error" }));
+  await page.goto("/admin");
+  await expect(page.getByRole("alert")).toContainText("Check the Pages Function deployment and D1 migrations.");
+  await expect(page.getByText("The admin request failed.", { exact: true })).toHaveCount(0);
 });
 
 test("admin exposes free Gmail notifications and configurable autoblogging", async ({ page }) => {

@@ -173,8 +173,15 @@ export default function Admin() {
 
   const request = useCallback(async (url: string, init: RequestInit = {}) => {
     const response = await fetch(url, { ...init, headers: { ...(init.body ? { "content-type": "application/json" } : {}), ...(csrf ? { "x-csrf-token": csrf } : {}), ...init.headers } });
-    const body = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(body.error || "The admin request failed.");
+    const rawBody = await response.text();
+    let body: Record<string, any> = {};
+    try { body = rawBody ? JSON.parse(rawBody) as Record<string, any> : {}; } catch { /* Cloudflare may return a plain-text error for an unhandled Function failure. */ }
+    if (!response.ok) {
+      const fallback = response.status >= 500
+        ? `The admin service could not complete this request (HTTP ${response.status}). Check the Pages Function deployment and D1 migrations.`
+        : `The admin request was rejected (HTTP ${response.status}).`;
+      throw new Error(typeof body.error === "string" && body.error ? body.error : fallback);
+    }
     return body;
   }, [csrf]);
 

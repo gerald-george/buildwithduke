@@ -1,4 +1,4 @@
-import { AdminEnv, requireAdmin } from "./_auth";
+import { AdminEnv, adminDatabaseError, requireAdmin } from "./_auth";
 import { sanitizeArticleHtml } from "../_shared/html";
 
 type ModuleName = keyof typeof definitions;
@@ -24,19 +24,23 @@ export const onRequestGet: PagesFunction<AdminEnv> = async ({ request, env }) =>
   if (auth.error) return auth.error;
   if (!env.DB) return Response.json({ error: "The D1 database binding is not configured." }, { status: 503 });
   const module = new URL(request.url).searchParams.get("module");
-  if (module === "overview") {
-    const [projects, testimonials, pricing, leads, commands, posts, settings, newLeads, draftPosts, publishedPosts, recentLeads] = await Promise.all([
-      count(env.DB, "projects"), count(env.DB, "testimonials"), count(env.DB, "pricing_tiers"), count(env.DB, "leads"),
-      count(env.DB, "daemon_commands", "is_active = 1"), count(env.DB, "blog_posts"), count(env.DB, "business_settings"),
-      count(env.DB, "leads", "status = 'new'"), count(env.DB, "blog_posts", "status = 'draft'"), count(env.DB, "blog_posts", "status = 'published'"),
-      env.DB.prepare("SELECT id, name, email, project_type, status, created_at FROM leads ORDER BY created_at DESC LIMIT 5").all(),
-    ]);
-    return Response.json({ counts: { projects, testimonials, pricing, leads, commands, posts, settings }, newLeads, draftPosts, publishedPosts, recentLeads: recentLeads.results }, { headers: { "Cache-Control": "no-store" } });
+  try {
+    if (module === "overview") {
+      const [projects, testimonials, pricing, leads, commands, posts, settings, newLeads, draftPosts, publishedPosts, recentLeads] = await Promise.all([
+        count(env.DB, "projects"), count(env.DB, "testimonials"), count(env.DB, "pricing_tiers"), count(env.DB, "leads"),
+        count(env.DB, "daemon_commands", "is_active = 1"), count(env.DB, "blog_posts"), count(env.DB, "business_settings"),
+        count(env.DB, "leads", "status = 'new'"), count(env.DB, "blog_posts", "status = 'draft'"), count(env.DB, "blog_posts", "status = 'published'"),
+        env.DB.prepare("SELECT id, name, email, project_type, status, created_at FROM leads ORDER BY created_at DESC LIMIT 5").all(),
+      ]);
+      return Response.json({ counts: { projects, testimonials, pricing, leads, commands, posts, settings }, newLeads, draftPosts, publishedPosts, recentLeads: recentLeads.results }, { headers: { "Cache-Control": "no-store" } });
+    }
+    const definition = definitionFor(module);
+    if (!definition) return Response.json({ error: "Unknown admin module." }, { status: 400 });
+    const rows = (await env.DB.prepare(`SELECT * FROM ${definition.table} ORDER BY ${definition.order}`).all()).results;
+    return Response.json({ rows }, { headers: { "Cache-Control": "no-store" } });
+  } catch (error) {
+    return adminDatabaseError(error);
   }
-  const definition = definitionFor(module);
-  if (!definition) return Response.json({ error: "Unknown admin module." }, { status: 400 });
-  const rows = (await env.DB.prepare(`SELECT * FROM ${definition.table} ORDER BY ${definition.order}`).all()).results;
-  return Response.json({ rows }, { headers: { "Cache-Control": "no-store" } });
 };
 
 export const onRequestPost: PagesFunction<AdminEnv> = async context => mutate(context, "create");
@@ -117,6 +121,7 @@ function isHttpUrl(value: unknown) {
 
 function databaseError(error: unknown) {
   const message = error instanceof Error ? error.message : "";
+  if (/no such table|no such column/i.test(message)) return adminDatabaseError(error);
   if (/unique|constraint/i.test(message)) return Response.json({ error: "A record with that slug, key or command already exists." }, { status: 409 });
   return Response.json({ error: "The database could not save this record." }, { status: 500 });
 }

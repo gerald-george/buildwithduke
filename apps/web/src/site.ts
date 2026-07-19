@@ -12,6 +12,6 @@ export const businessFacts = {
   founder: "Duke Chijimaka Jonathan",
   industry: "Full-stack web development and AI automation consultancy",
   areaServed: "UK-wide, remote",
-  hours: "Monday–Friday, 09:00–18:00 GMT/BST",
+  hours: "Monday–Sunday, 09:00–22:59 GMT/BST",
   paymentMethods: "Bank transfer only",
 } as const;
