@@ -1,10 +1,9 @@
-import { escapeHtml } from "./_shared/html";
-import { getMicrosoftMailbox, sendMicrosoftMail, type MicrosoftEnv } from "./_shared/microsoft";
+import type { AdminEnv } from "./admin/_auth";
 
-interface Env extends MicrosoftEnv {
+interface Env extends AdminEnv {
   TURNSTILE_SECRET_KEY?: string;
-  RESEND_API_KEY?: string;
-  CONTACT_FROM_EMAIL?: string;
+  GOOGLE_APPS_SCRIPT_URL?: string;
+  CONTACT_RELAY_SECRET?: string;
 }
 
 type ContactBody = {
@@ -53,26 +52,32 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     .run();
   if (env.CACHE) { const count = Number(await env.CACHE.get(rateKey) || 0) + 1; await env.CACHE.put(rateKey, String(count), { expirationTtl: 3600 }); }
 
-  await deliverNotifications(env, body);
+  await deliverNotification(env, body);
   return Response.json({ ok: true, id }, { status: 201 });
 };
 
-async function deliverNotifications(env: Env, body: ContactBody) {
-  const notification = { to: "buildwithduke@outlook.com", subject: `New project enquiry from ${body.name}`, html: `<p><strong>${escapeHtml(body.name!)}</strong> (${escapeHtml(body.email!)}) sent a project enquiry.</p><p><strong>Company:</strong> ${escapeHtml(body.company || "Not supplied")}<br><strong>Project:</strong> ${escapeHtml(body.projectType || "Not supplied")}<br><strong>Budget:</strong> ${escapeHtml(body.budget || "Not supplied")}</p><p>${escapeHtml(body.message!)}</p>` };
-  const confirmation = { to: body.email!, subject: "Your Build With Duke enquiry landed", html: `<p>Hi ${escapeHtml(body.name!)},</p><p>Got it. I usually reply within 24 hours, UK time.</p><p>— Duke</p>` };
-  let messages = [notification, confirmation];
-  let pending = messages;
+async function deliverNotification(env: Env, body: ContactBody) {
+  if (!env.GOOGLE_APPS_SCRIPT_URL || !env.CONTACT_RELAY_SECRET) return;
   try {
-    const mailbox = await getMicrosoftMailbox(env);
-    messages = [{ ...notification, to: mailbox.email }, confirmation];
-    const results = await Promise.allSettled(messages.map(message => sendMicrosoftMail(mailbox.accessToken, message.to, message.subject, message.html)));
-    pending = messages.filter((_, index) => results[index].status === "rejected");
-  } catch { /* Microsoft is optional until an account is connected. */ }
-  if (pending.length && env.RESEND_API_KEY && env.CONTACT_FROM_EMAIL) {
-    await Promise.allSettled(pending.map(message => sendEmail(env.RESEND_API_KEY!, env.CONTACT_FROM_EMAIL!, message.to, message.subject, message.html)));
+    const relayUrl = new URL(env.GOOGLE_APPS_SCRIPT_URL);
+    if (relayUrl.protocol !== "https:" || relayUrl.hostname !== "script.google.com" || !relayUrl.pathname.startsWith("/macros/s/")) throw new Error("The Google Apps Script URL is invalid.");
+    const response = await fetch(relayUrl, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=UTF-8" },
+      body: JSON.stringify({
+        relaySecret: env.CONTACT_RELAY_SECRET,
+        name: body.name!.trim(),
+        email: body.email!.trim().toLowerCase(),
+        company: body.company?.trim() || "",
+        projectType: body.projectType || "",
+        budget: body.budget || "",
+        message: body.message!.trim(),
+      }),
+      redirect: "follow",
+    });
+    const result = await response.json<{ ok?: boolean }>().catch(() => null);
+    if (!response.ok || !result?.ok) throw new Error("The Gmail notification relay rejected the request.");
+  } catch (error) {
+    console.error("Contact notification delivery failed.", error instanceof Error ? error.message : "Unknown relay error");
   }
-}
-
-function sendEmail(apiKey: string, from: string, to: string, subject: string, html: string) {
-  return fetch("https://api.resend.com/emails", { method: "POST", headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" }, body: JSON.stringify({ from, to, subject, html }) });
 }

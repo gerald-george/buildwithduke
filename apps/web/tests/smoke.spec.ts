@@ -209,19 +209,35 @@ test("authenticated admin uses friendly forms and a rich article editor", async 
   await expect(page.locator(".rich-editor .tiptap")).toBeVisible();
 });
 
-test("admin exposes Microsoft lead communication and configurable autoblogging", async ({ page }) => {
+test("admin exposes free Gmail notifications and configurable autoblogging", async ({ page }) => {
   await page.route("**/api/admin/session", route => route.fulfill({ json: { ok: true, csrf: "test-csrf" } }));
   await page.route("**/api/admin/data?module=overview", route => route.fulfill({ json: { counts: {}, newLeads: 0, draftPosts: 0, publishedPosts: 0, recentLeads: [] } }));
-  await page.route("**/api/admin/microsoft", route => route.fulfill({ json: { configured: true, connected: false } }));
+  await page.route("**/api/admin/notifications", route => route.fulfill({ json: { configured: true, provider: "Google Apps Script MailApp", replyMailbox: "buildwithduke@outlook.com" } }));
   await page.route("**/api/admin/autoblog", route => route.fulfill({ json: { configured: { openrouter: true, serpapi: true, scheduler: true }, settings: { id: "primary", enabled: 0, interval_hours: 168, topics: '["AI automation for UK small businesses"]', model: "openrouter/free", search_country: "uk", search_language: "en", publish_mode: "draft", min_words: 900, max_posts_per_month: 4, similarity_threshold: 0.58, next_run_at: null }, runs: [] } }));
   await page.goto("/admin");
-  await page.getByRole("button", { name: /Integrations Microsoft mailbox/ }).click();
-  await expect(page.getByRole("heading", { name: "Connect Outlook" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Connect Microsoft account" })).toBeEnabled();
+  await page.getByRole("button", { name: /Notifications Free Gmail alerts/ }).click();
+  await expect(page.getByRole("heading", { name: "Gmail alerts ready" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Gmail in, Outlook out" })).toBeVisible();
   await page.getByRole("button", { name: /Autoblog Research/ }).click();
   await expect(page.getByRole("heading", { name: "Cadence and editorial brief" })).toBeVisible();
   await expect(page.locator('input[value="openrouter/free"]')).toBeVisible();
   await expect(page.getByText("Draft review is the safest default.", { exact: false })).toBeVisible();
+});
+
+test("lead records hand replies off to Outlook without a mailbox API", async ({ page }) => {
+  await page.route("**/api/admin/session", route => route.fulfill({ json: { ok: true, csrf: "test-csrf" } }));
+  await page.route("**/api/admin/data?module=*", route => {
+    const module = new URL(route.request().url()).searchParams.get("module");
+    if (module === "overview") return route.fulfill({ json: { counts: { leads: 1 }, newLeads: 1, draftPosts: 0, publishedPosts: 0, recentLeads: [] } });
+    if (module === "leads") return route.fulfill({ json: { rows: [{ id: "lead-1", name: "Ada Lovelace", email: "ada@example.com", message: "I would like to discuss a new web project in detail.", status: "new", created_at: "2026-07-19T10:00:00.000Z" }] } });
+    return route.fulfill({ json: { rows: [] } });
+  });
+  await page.goto("/admin");
+  await page.getByRole("button", { name: /Leads Enquiries/ }).click();
+  await page.getByRole("button", { name: /Ada Lovelace/ }).click();
+  const reply = page.getByRole("link", { name: "Draft reply in Outlook" });
+  await expect(reply).toHaveAttribute("href", /^mailto:ada%40example\.com\?subject=Re%3A%20Your%20Build%20With%20Duke%20enquiry&body=/);
+  await expect(page.getByText("No synced messages")).toHaveCount(0);
 });
 
 test("published article routes render rich content after sanitizing it", async ({ page }) => {

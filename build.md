@@ -125,7 +125,7 @@ Each project/service/pricing page carries its own meta title/description, schema
 **Footer credit:** No external agency credit line applies here because Duke is buildwithduke. Use the compact self-referential line `// built with ❤️` and the copyright brand `Build With Duke`.
 
 **CTA placement:** Sticky bottom-right DAEMON bubble doubles as a mobile sticky CTA; primary “Start a project” button repeats after hero, after proof section, and in final CTA.
-**Lead-capture flow:** Contact form (name, email, company, project type dropdown, budget range, message) → Pages Function → validated → stored in D1 `leads` table → email notification to `buildwithduke@outlook.com` via Resend → auto-responder to visitor → optional WhatsApp deep-link with pre-filled message.
+**Lead-capture flow:** Contact form (name, email, company, project type dropdown, budget range, message) → Pages Function → validated → stored in D1 `leads` table → private notification to the configured Gmail account via Google Apps Script MailApp → follow-up from `buildwithduke@outlook.com` through the Outlook app → optional WhatsApp deep-link with pre-filled message.
 **WhatsApp integration:** Floating action button + DAEMON `contact` command both open `wa.me/<number>?text=Hi%20Duke%2C%20I%20found%20your%20site%20and%20want%20to%20talk%20about%20a%20project`.
 **Trust badges:** First-Class Honours, Best Graduating Student, SUSI State Dept Exchange Alumnus, “Live production builds on Cloudflare”, GitHub contribution proof.
 **Accessibility:** WCAG 2.1 AA — all glitch/decrypt text effects have a static-text fallback for reduced-motion and screen readers (effect is decorative, real text is always in the DOM).
@@ -257,7 +257,7 @@ Mobile-first; DAEMON collapses to a small tappable icon (full terminal view open
 
 **Framework:** React Router v7+ on Cloudflare Pages (default rule applies — no Next.js/Vercel signal present).
 
-**Stack:** Cloudflare Pages + Pages Functions · React Router v7 · TypeScript · Vite · pnpm workspaces · bespoke CSS design system · Lucide React and technology brand icons · IntersectionObserver/pointer-event motion system · D1 · KV (rate-limit/cache support) · R2 (project screenshots and PDF media) · Cloudflare Turnstile · Resend · bank transfer (details shared privately after quote acceptance) · consent-gated Plausible support.
+**Stack:** Cloudflare Pages + Pages Functions · React Router v7 · TypeScript · Vite · pnpm workspaces · bespoke CSS design system · Lucide React and technology brand icons · IntersectionObserver/pointer-event motion system · D1 · KV (rate-limit/cache support) · R2 (project screenshots and PDF media) · Cloudflare Turnstile · Google Apps Script MailApp relay · bank transfer (details shared privately after quote acceptance) · consent-gated Plausible support.
 
 **Monorepo:**
 
@@ -270,7 +270,7 @@ packages/db-adapters/cloudflare-d1/
 packages/db-adapters/supabase/
 packages/types/
 packages/validators/         # Zod schemas: leadForm, projectSchema, pricingTierSchema
-packages/email/              # Resend adapter
+tools/google-apps-script/    # Free Gmail notification relay
 packages/seo/
 packages/analytics/
 packages/payments/           # portable bank-transfer instructions adapter
@@ -332,13 +332,13 @@ Standard implementation per framework: dynamic meta/OG/Twitter cards, XML sitema
 
 ## 28. Deployment
 
-**Cloudflare Pages** (default, matches framework choice). Monorepo root: repo root; app root: `apps/web`; build command: `pnpm build`; output: `apps/web/build/client`; Functions dir: `apps/web/functions`; D1/KV/R2 bindings via `wrangler.toml`, scoped as above; Turnstile site/secret keys as env vars; Resend key as an encrypted env var; preview deployments per PR, production on `main`.
+**Cloudflare Pages** (default, matches framework choice). Monorepo root: repo root; app root: `apps/web`; build command: `pnpm build`; output: `apps/web/build/client`; Functions dir: `apps/web/functions`; D1/KV/R2 bindings via `wrangler.toml`, scoped as above; Turnstile and the Google Apps Script relay values are encrypted environment variables; preview deployments per PR, production on `main`.
 
 -----
 
 ## 29. Portability Notes
 
-D1 → Supabase Postgres; R2 → Supabase Storage; Pages Functions → Netlify Functions if ever migrated; keep bank-transfer instructions, Resend and Turnstile calls behind `packages/payments`, `packages/email`, and a generic `verifyCaptcha()` adapter so none of it is Cloudflare-locked.
+D1 → Supabase Postgres; R2 → Supabase Storage; Pages Functions → Netlify Functions if ever migrated; keep bank-transfer instructions, notification delivery and Turnstile calls behind small server-side adapters so none of it is Cloudflare-locked.
 
 -----
 
@@ -369,7 +369,7 @@ D1 → Supabase Postgres; R2 → Supabase Storage; Pages Functions → Netlify F
 
 ## 31. Lead Capture & Contact Flow
 
-Contact form → Pages Function validates + Turnstile-checks → stored in `leads` (D1) → Resend notification to [buildwithduke@outlook.com](mailto:buildwithduke@outlook.com) → auto-confirmation to visitor (“Got it — I usually reply within 24 hours, UK time”) → optional WhatsApp deep link as a faster alternative route, always visible alongside the form, never gated behind it.
+Contact form → Pages Function validates + Turnstile-checks → stored in `leads` (D1) → one Google Apps Script MailApp notification to the configured Gmail account → prefilled follow-up from [buildwithduke@outlook.com](mailto:buildwithduke@outlook.com) in Outlook → optional WhatsApp deep link as a faster alternative route, always visible alongside the form, never gated behind it.
 
 -----
 
@@ -434,13 +434,13 @@ Style pricing cards as terminal windows, not default SaaS pricing table.
 
 CONTACT: buildwithduke@outlook.com, public phone/WhatsApp +234 915 215 1634, WhatsApp click-to-chat, contact form (name, email, company, project
 type, budget range, message) with Turnstile + GDPR consent checkbox, stored in D1,
-Resend email notification + auto-responder.
+Free Gmail notification through a shared-secret Google Apps Script relay.
 
 TECH STACK: Cloudflare Pages + Pages Functions, React Router v7+, TypeScript, Vite,
 pnpm workspaces, a bespoke CSS token/component system, Lucide icons
 (bracket-wrapped and restyled), a custom IntersectionObserver/pointer-event motion
 system, D1, KV and R2
-(project screenshots + CV PDF), Cloudflare Turnstile, Resend, bank transfer only
+(project screenshots + CV PDF), Cloudflare Turnstile, Google Apps Script MailApp, bank transfer only
 (private instructions after quote acceptance; no checkout or customer accounts), GA4 or Plausible.
 
 MONOREPO: apps/web (+ apps/web/functions), packages/ui, db, db-adapters
@@ -475,7 +475,7 @@ export/delete-on-request capability for leads.
 
 DEPLOYMENT: Cloudflare Pages, monorepo root at repo root, app root apps/web, build
 command pnpm build, output apps/web/build/client, Functions dir apps/web/functions,
-D1/KV/R2 bindings via wrangler.toml, Turnstile/Resend keys as encrypted env
+D1/KV/R2 bindings via wrangler.toml, Turnstile and contact-relay values as encrypted env
 vars. Document Netlify/Supabase portability path in README.
 
 FOOTER: no external agency credit line (Duke IS buildwithduke). Show the copyright
@@ -497,7 +497,7 @@ mistakable for a generic developer portfolio template with the colours changed.
 - [x] SEO basics (route meta, sitemap, robots.txt, schema) in place
 - [x] AI SEO Business Facts block present
 - [x] Local/UK relevance signals present (GBP pricing, UK hours, WhatsApp, public phone)
-- [x] Contact form implementation includes Turnstile, D1 storage, Resend notifications, validation and rate limiting
+- [x] Contact form implementation includes Turnstile, D1 storage, private Gmail notifications, validation and rate limiting
 - [x] Admin dashboard supports projects, testimonials, pricing, leads, posts, settings and DAEMON commands
 - [x] Granular cookie consent plus Privacy/Cookie/Terms pages implemented
 - [x] Keyboard, focus, semantic, contrast and reduced-motion safeguards implemented

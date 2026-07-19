@@ -38,25 +38,27 @@ pnpm dlx wrangler r2 bucket create buildwithduke-media
 pnpm dlx wrangler d1 execute buildwithduke --remote --file packages/db/migrations/0001_initial.sql
 pnpm dlx wrangler d1 execute buildwithduke --remote --file packages/db/migrations/0002_production_admin.sql
 pnpm dlx wrangler d1 execute buildwithduke --remote --file packages/db/migrations/0003_integrations_autoblogging_seo.sql
+pnpm dlx wrangler d1 execute buildwithduke --remote --file packages/db/migrations/0004_remove_microsoft_credentials.sql
 ```
 
-Configure `TURNSTILE_SECRET_KEY`, `RESEND_API_KEY`, `ADMIN_PASSWORD_HASH`, `ADMIN_SESSION_SECRET`, and `CONTACT_FROM_EMAIL` as encrypted Pages secrets. Configure `ADMIN_EMAIL`, `VITE_TURNSTILE_SITE_KEY`, and `VITE_PLAUSIBLE_DOMAIN` as build/runtime variables. `CONTACT_FROM_EMAIL` must be a sender verified by Resend. Production contact requests fail closed when Turnstile or D1 is unavailable; successfully validated enquiries are stored even if an email provider has a transient failure. Bank transfer is the only payment method currently offered; payment details are sent privately with an accepted quote or invoice and are never stored in client-side code.
+Configure `TURNSTILE_SECRET_KEY`, `ADMIN_PASSWORD_HASH`, `ADMIN_SESSION_SECRET`, `GOOGLE_APPS_SCRIPT_URL`, and `CONTACT_RELAY_SECRET` as encrypted Pages secrets. Configure `ADMIN_EMAIL`, `VITE_TURNSTILE_SITE_KEY`, and `VITE_PLAUSIBLE_DOMAIN` as build/runtime variables. Production contact requests fail closed when Turnstile or D1 is unavailable; successfully validated enquiries are stored even if the private Gmail notification relay has a transient failure. Bank transfer is the only payment method currently offered; payment details are sent privately with an accepted quote or invoice and are never stored in client-side code.
 
 The public WhatsApp number and GitHub organisation match Duke’s current public profiles. The included headshot, logo, project captures and concise CV PDF are served locally, so the public portfolio has no media-service dependency. Replace the concise PDF with Duke’s final long-form CV whenever it is available.
 
-The admin password is never stored as plaintext. Store a `sha256:`-prefixed SHA-256 digest in `ADMIN_PASSWORD_HASH`; the session signing secret should be at least 32 random bytes. The professional admin workspace provides an activity overview, searchable and filtered records, purpose-built fields, media upload and preview, project metrics and tag builders, lead status and mailbox communication, pricing and testimonial workflows, scheduled editorial controls, DAEMON controls, and an approved public-settings editor. Articles use the free MIT-licensed Tiptap WYSIWYG editor, publish to dedicated article routes, are allowlist-sanitized before D1 storage, and are sanitized again with DOMPurify before public rendering. Login attempts are rate-limited through the `CACHE` KV binding, mutations require a per-session CSRF token, and cookies are HttpOnly, Secure, SameSite Strict, and expire after eight hours.
+The admin password is never stored as plaintext. Store a `sha256:`-prefixed SHA-256 digest in `ADMIN_PASSWORD_HASH`; the session signing secret should be at least 32 random bytes. The professional admin workspace provides an activity overview, searchable and filtered records, purpose-built fields, media upload and preview, project metrics and tag builders, lead status and an Outlook reply handoff, pricing and testimonial workflows, scheduled editorial controls, DAEMON controls, and an approved public-settings editor. Articles use the free MIT-licensed Tiptap WYSIWYG editor, publish to dedicated article routes, are allowlist-sanitized before D1 storage, and are sanitized again with DOMPurify before public rendering. Login attempts are rate-limited through the `CACHE` KV binding, mutations require a per-session CSRF token, and cookies are HttpOnly, Secure, SameSite Strict, and expire after eight hours.
 
-## Microsoft lead workflow
+## Free Gmail notification workflow
 
-Register a web application in Microsoft Entra and add this exact redirect URI:
+The contact backend uses Google Apps Script's `MailApp` service. It needs no custom domain, paid Microsoft tenant, OAuth client, or mailbox tokens in D1. A consumer Gmail account currently has a quota of 100 email recipients per day, and this integration uses one recipient for each accepted enquiry. See Google's [Apps Script quotas](https://developers.google.com/apps-script/guides/services/quotas) and [web app deployment guide](https://developers.google.com/apps-script/guides/web).
 
-```text
-https://buildwithduke.pages.dev/api/admin/microsoft/callback
-```
+1. Sign in to the Gmail account that should receive notifications and create a standalone project at [script.google.com](https://script.google.com).
+2. Replace its editor contents with [`tools/google-apps-script/contact-relay.gs`](tools/google-apps-script/contact-relay.gs).
+3. In Project Settings → Script properties, add `RELAY_SECRET` (a long random value), `NOTIFICATION_EMAIL` (the receiving Gmail address), and `BUSINESS_REPLY_EMAIL` (`buildwithduke@outlook.com`).
+4. Choose Deploy → New deployment → Web app. Set **Execute as** to **Me** and **Who has access** to **Anyone**, authorise MailApp, and copy the deployed `/exec` URL.
+5. Add that URL to Cloudflare as the encrypted `GOOGLE_APPS_SCRIPT_URL` secret. Add the exact same `RELAY_SECRET` value as the encrypted `CONTACT_RELAY_SECRET` secret.
+6. Submit a real test enquiry, confirm it appears in D1 and Gmail, then use the lead's **Draft reply in Outlook** button. The button uses `mailto:`; set Outlook as the device's default mail app so the reply comes from the business mailbox.
 
-Enable delegated Microsoft Graph permissions `User.Read`, `Mail.Read`, and `Mail.Send`; the application requests `offline_access` during consent so the mailbox remains usable when Duke is away. Add `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET`, and a long random `INTEGRATION_ENCRYPTION_KEY` as encrypted Cloudflare secrets. `MICROSOFT_TENANT_ID=common` supports personal Microsoft accounts and work/school accounts. Then open Admin → Integrations and connect the intended mailbox.
-
-Access and refresh tokens are AES-GCM encrypted before D1 storage. A connected account receives contact-form notifications, sends confirmations and dashboard replies, and can synchronise recent Inbox/Sent Items messages for a lead. Resend remains an optional per-message fallback when configured.
+The relay accepts only requests containing the shared secret, validates and limits every field again, sends one alert, and returns no lead data. `GOOGLE_APPS_SCRIPT_URL`, `CONTACT_RELAY_SECRET`, and all Apps Script properties are server-only values and must never use the `VITE_` prefix. The dashboard reports whether the Cloudflare half is configured but never exposes either value.
 
 ## Scheduled autoblogging
 

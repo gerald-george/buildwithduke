@@ -2,8 +2,8 @@ import { ChangeEvent, Dispatch, FormEvent, ReactNode, SetStateAction, useCallbac
 import {
   AlertTriangle, ArrowLeft, ArrowRight, BarChart3, BookOpen, Bot, BriefcaseBusiness, Cable, Check, CheckCircle2,
   ChevronRight, CircleDollarSign, Clock3, Command, Copy, Database, Download, ExternalLink, FileText, Image as ImageIcon,
-  Inbox, LayoutDashboard, LockKeyhole, LogOut, Mail, MessageSquareQuote, Play, Plus, RefreshCw, Save, Search, Send,
-  Settings2, ShieldCheck, SlidersHorizontal, Tag, Trash2, Unplug, Upload, Users, X,
+  LayoutDashboard, LockKeyhole, LogOut, Mail, MessageSquareQuote, Play, Plus, RefreshCw, Save, Search,
+  Settings2, ShieldCheck, SlidersHorizontal, Tag, Trash2, Upload, Users, X,
 } from "lucide-react";
 import { IconBox, TerminalWindow } from "./components";
 import AdminRichTextEditor from "./AdminRichTextEditor";
@@ -21,7 +21,7 @@ type Field = {
 type Overview = {
   counts: Partial<Record<DataModule, number>>; newLeads: number; draftPosts: number; publishedPosts: number; recentLeads: Row[];
 };
-type MicrosoftStatus = { configured: boolean; connected: boolean; connection?: { account_email?: string; account_name?: string; connected_at?: string; scopes?: string } };
+type NotificationStatus = { configured: boolean; provider?: string; replyMailbox?: string };
 type AutoblogData = { settings: Row | null; runs: Row[]; configured: { openrouter: boolean; serpapi: boolean; scheduler: boolean } };
 
 const dataModules: DataModule[] = ["projects", "testimonials", "pricing", "leads", "commands", "posts", "settings"];
@@ -35,7 +35,7 @@ const modules: Array<{ key: Module; label: string; copy: string; icon: typeof La
   { key: "leads", label: "Leads", copy: "Enquiries and sales status", icon: Users },
   { key: "posts", label: "Articles", copy: "Build log drafts and publishing", icon: BookOpen },
   { key: "automation", label: "Autoblog", copy: "Research, cadence and originality", icon: Bot },
-  { key: "integrations", label: "Integrations", copy: "Microsoft mailbox connection", icon: Cable },
+  { key: "integrations", label: "Notifications", copy: "Free Gmail alerts and Outlook replies", icon: Cable },
   { key: "commands", label: "DAEMON", copy: "Terminal commands and actions", icon: Command },
   { key: "settings", label: "Settings", copy: "Public business details", icon: Settings2 },
 ];
@@ -168,7 +168,7 @@ export default function Admin() {
   const [filter, setFilter] = useState("all");
   const [notice, setNotice] = useState<{ text: string; kind: "success" | "error" } | null>(null);
   const [busy, setBusy] = useState(false);
-  const [microsoft, setMicrosoft] = useState<MicrosoftStatus>({ configured: false, connected: false });
+  const [notifications, setNotifications] = useState<NotificationStatus>({ configured: false });
   const [autoblog, setAutoblog] = useState<AutoblogData>({ settings: null, runs: [], configured: { openrouter: false, serpapi: false, scheduler: false } });
 
   const request = useCallback(async (url: string, init: RequestInit = {}) => {
@@ -181,7 +181,7 @@ export default function Admin() {
   const load = useCallback(async (next: Module, quiet = false) => {
     if (!quiet) setBusy(true);
     try {
-      if (next === "integrations") setMicrosoft(await request("/api/admin/microsoft") as MicrosoftStatus);
+      if (next === "integrations") setNotifications(await request("/api/admin/notifications") as NotificationStatus);
       else if (next === "automation") setAutoblog(await request("/api/admin/autoblog") as AutoblogData);
       else {
         const body = await request(`/api/admin/data?module=${next}`);
@@ -200,14 +200,6 @@ export default function Admin() {
     }).catch(() => setAuthenticated(false));
   }, []);
   useEffect(() => { if (authenticated) load(module); }, [authenticated, module, load]);
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (!params.has("microsoft")) return;
-    setModule("integrations");
-    setNotice({ text: params.get("microsoft") === "connected" ? "Microsoft account connected successfully." : params.get("detail") || "Microsoft connection failed.", kind: params.get("microsoft") === "connected" ? "success" : "error" });
-    window.history.replaceState({}, "", "/admin");
-  }, []);
-
   const dirty = Boolean(editing && JSON.stringify(editing) !== original);
   useEffect(() => {
     const warn = (event: BeforeUnloadEvent) => { if (dirty) event.preventDefault(); };
@@ -337,7 +329,7 @@ export default function Admin() {
       <main className="admin-workspace">
         <div className="admin-toolbar"><div>{editing && <button className="admin-back" onClick={() => navigateModule(module)}><ArrowLeft size={15} /> Back to {current.label.toLowerCase()}</button>}<span className="kicker">{editing ? `${editing.id ? "Edit" : "Create"} ${singular(module)}` : current.label}</span><h2>{editing ? recordTitle(editing) || `New ${singular(module)}` : module === "overview" ? "Workspace overview" : module === "automation" ? "Scheduled editorial engine" : module === "integrations" ? "Connected services" : `${rows.length} record${rows.length === 1 ? "" : "s"}`}</h2>{!editing && <p>{current.copy}</p>}</div>{!editing && <div>{module === "leads" && <button className="button button-ghost" onClick={exportLeads}><Download size={16} /> Export CSV</button>}<button className="button button-ghost" onClick={() => load(module)} disabled={busy}><RefreshCw className={busy ? "spin" : ""} size={16} /> Refresh</button>{dataModules.includes(module as DataModule) && module !== "leads" && <button className="button button-primary" onClick={() => openEditor()}><Plus size={16} /> Add {singular(module)}</button>}</div>}</div>
         {notice && <div className={`admin-notice ${notice.kind}`} role={notice.kind === "error" ? "alert" : "status"}>{notice.kind === "success" ? <CheckCircle2 size={18} /> : <X size={18} />}<span>{notice.text}</span><button onClick={() => setNotice(null)} aria-label="Dismiss message"><X size={15} /></button></div>}
-        {module === "overview" ? <OverviewPanel data={overview} onOpen={navigateModule} /> : module === "integrations" ? <MicrosoftPanel data={microsoft} request={request} onReload={() => load("integrations", true)} setNotice={setNotice} /> : module === "automation" ? <AutoblogPanel data={autoblog} setData={setAutoblog} request={request} onReload={() => load("automation", true)} setNotice={setNotice} /> : editing ? <RecordEditor module={module as DataModule} record={editing} busy={busy} request={request} onChange={updateField} onUpload={uploadMedia} onSave={save} onCancel={() => navigateModule(module)} /> : <>
+        {module === "overview" ? <OverviewPanel data={overview} onOpen={navigateModule} /> : module === "integrations" ? <NotificationPanel data={notifications} /> : module === "automation" ? <AutoblogPanel data={autoblog} setData={setAutoblog} request={request} onReload={() => load("automation", true)} setNotice={setNotice} /> : editing ? <RecordEditor module={module as DataModule} record={editing} busy={busy} onChange={updateField} onUpload={uploadMedia} onSave={save} onCancel={() => navigateModule(module)} /> : <>
           <div className="admin-list-tools"><label><Search size={16} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder={`Search ${current.label.toLowerCase()}…`} aria-label={`Search ${current.label}`} />{query && <button onClick={() => setQuery("")} aria-label="Clear search"><X size={14} /></button>}</label>{filterOptions(module) && <label className="admin-filter"><SlidersHorizontal size={15} /><select value={filter} onChange={event => setFilter(event.target.value)} aria-label="Filter records">{filterOptions(module)!.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>}</div>
           <RecordList module={module as DataModule} rows={filteredRows} loading={busy && rows.length === 0} query={query} onEdit={openEditor} onDuplicate={duplicate} onDelete={remove} />
         </>}
@@ -369,32 +361,19 @@ function RecordList({ module, rows, loading, query, onEdit, onDuplicate, onDelet
   </article>)}</div>;
 }
 
-function RecordEditor({ module, record, busy, request, onChange, onUpload, onSave, onCancel }: { module: DataModule; record: Row; busy: boolean; request: AdminRequest; onChange: (key: string, value: unknown) => void; onUpload: (event: ChangeEvent<HTMLInputElement>, field: string) => void; onSave: () => void; onCancel: () => void }) {
+function RecordEditor({ module, record, busy, onChange, onUpload, onSave, onCancel }: { module: DataModule; record: Row; busy: boolean; onChange: (key: string, value: unknown) => void; onUpload: (event: ChangeEvent<HTMLInputElement>, field: string) => void; onSave: () => void; onCancel: () => void }) {
   const groups = [...new Set(fields[module].map(field => field.group))];
-  return <div className="admin-form">{module === "leads" && <div className="lead-contact-actions"><a className="button button-primary" href={`mailto:${asString(record.email)}`}><Mail size={16} /> Email {asString(record.name).split(" ")[0]}</a>{asString(record.email) && <button className="button button-ghost" onClick={() => navigator.clipboard.writeText(asString(record.email))}><Copy size={15} /> Copy email</button>}</div>}
+  const replyHref = `mailto:${encodeURIComponent(asString(record.email))}?subject=${encodeURIComponent("Re: Your Build With Duke enquiry")}&body=${encodeURIComponent(`Hi ${asString(record.name).split(" ")[0]},\n\nThanks for getting in touch.\n\n— Duke\nBuild With Duke`)}`;
+  return <div className="admin-form">{module === "leads" && <div className="lead-contact-actions"><a className="button button-primary" href={replyHref} title="Opens your default mail app; set Outlook as the default to reply from the business account."><Mail size={16} /> Draft reply in Outlook</a>{asString(record.email) && <button className="button button-ghost" onClick={() => navigator.clipboard.writeText(asString(record.email))}><Copy size={15} /> Copy email</button>}</div>}
     {groups.map(group => <section className={`admin-form-section ${group === "Content" ? "wide" : ""}`} key={group}><div className="admin-form-section-head"><h3>{group}</h3><span>{sectionHelp(module, group)}</span></div><div className="admin-fields">{fields[module].filter(field => field.group === group).map(field => <AdminField key={field.key} field={field} value={record[field.key]} record={record} busy={busy} onChange={value => onChange(field.key, value)} onUpload={event => onUpload(event, field.key)} />)}</div></section>)}
-    {module === "leads" && Boolean(record.id) && <LeadConversation lead={record} request={request} />}
     <div className="admin-savebar"><div>{record.id ? <><Check size={17} /><span>Editing an existing {singular(module)}</span></> : <><Plus size={17} /><span>Creating a new {singular(module)}</span></>}</div><div><button className="button button-ghost" onClick={onCancel} disabled={busy}>Cancel</button><button className="button button-primary" onClick={onSave} disabled={busy}><Save size={16} /> {busy ? "Saving…" : module === "leads" ? "Update status" : "Save record"}</button></div></div>
   </div>;
 }
 
-function MicrosoftPanel({ data, request, onReload, setNotice }: { data: MicrosoftStatus; request: AdminRequest; onReload: () => Promise<void>; setNotice: (notice: { text: string; kind: "success" | "error" } | null) => void }) {
-  const [busy, setBusy] = useState(false);
-  const connect = async () => {
-    setBusy(true); setNotice(null);
-    try { const result = await request("/api/admin/microsoft", { method: "POST", body: "{}" }); window.location.assign(String(result.url)); }
-    catch (error) { setNotice({ text: error instanceof Error ? error.message : "Microsoft connection failed.", kind: "error" }); setBusy(false); }
-  };
-  const disconnect = async () => {
-    if (!window.confirm("Disconnect this Microsoft mailbox? Existing lead history will remain in the dashboard.")) return;
-    setBusy(true); setNotice(null);
-    try { await request("/api/admin/microsoft", { method: "DELETE", body: "{}" }); await onReload(); setNotice({ text: "Microsoft mailbox disconnected.", kind: "success" }); }
-    catch (error) { setNotice({ text: error instanceof Error ? error.message : "Could not disconnect Microsoft.", kind: "error" }); }
-    finally { setBusy(false); }
-  };
-  return <div className="integration-grid"><section className="admin-panel integration-card"><div className="integration-brand"><span><Cable /></span><div><span className="kicker">Microsoft Graph</span><h3>{data.connected ? "Mailbox connected" : "Connect Outlook"}</h3></div><StatusBadge value={data.connected ? "active" : data.configured ? "ready" : "inactive"} /></div>
-    {data.connected ? <><div className="integration-account"><strong>{data.connection?.account_name || "Microsoft account"}</strong><span>{data.connection?.account_email}</span><small>Connected {formatDate(data.connection?.connected_at)}</small></div><div className="integration-actions"><button className="button button-ghost" onClick={disconnect} disabled={busy}><Unplug size={16} /> Disconnect</button></div></> : <><p>Connect the mailbox that should receive enquiry alerts and send lead replies. Tokens remain encrypted in D1 and never reach the browser.</p><button className="button button-primary" onClick={connect} disabled={busy || !data.configured}><Cable size={16} /> {busy ? "Opening Microsoft…" : "Connect Microsoft account"}</button>{!data.configured && <div className="admin-inline-warning"><AlertTriangle size={16} /><span>Add the Microsoft client ID, client secret and encryption key to Cloudflare before connecting.</span></div>}</>}
-  </section><section className="admin-panel integration-capabilities"><div className="admin-panel-head"><div><span className="kicker">What it enables</span><h3>One lead workflow</h3></div><ShieldCheck /></div><ul><li><Mail /> Form-submission alerts in your Microsoft inbox</li><li><Send /> Personal replies sent from the connected mailbox</li><li><Inbox /> Recent lead replies synchronised into the dashboard</li><li><ShieldCheck /> Refresh tokens encrypted at rest and revocable at any time</li></ul></section></div>;
+function NotificationPanel({ data }: { data: NotificationStatus }) {
+  return <div className="integration-grid"><section className="admin-panel integration-card"><div className="integration-brand"><span><Mail /></span><div><span className="kicker">Google Apps Script</span><h3>{data.configured ? "Gmail alerts ready" : "Gmail relay needs setup"}</h3></div><StatusBadge value={data.configured ? "active" : "inactive"} /></div>
+    <p>New contact-form enquiries stay in D1 and are privately forwarded to the Gmail account that owns the free Apps Script relay.</p>{!data.configured && <div className="admin-inline-warning"><AlertTriangle size={16} /><span>Add the Apps Script deployment URL and shared relay secret to Cloudflare to enable alerts.</span></div>}
+  </section><section className="admin-panel integration-capabilities"><div className="admin-panel-head"><div><span className="kicker">Lead handoff</span><h3>Gmail in, Outlook out</h3></div><ShieldCheck /></div><ul><li><Mail /> One private Gmail alert for each accepted enquiry</li><li><Cable /> No custom domain, paid tenant or mailbox OAuth client</li><li><ShieldCheck /> Shared secret stays server-side in Cloudflare and Apps Script</li><li><ExternalLink /> Lead records open prefilled replies in your Outlook mail app</li></ul></section></div>;
 }
 
 function AutoblogPanel({ data, setData, request, onReload, setNotice }: { data: AutoblogData; setData: Dispatch<SetStateAction<AutoblogData>>; request: AdminRequest; onReload: () => Promise<void>; setNotice: (notice: { text: string; kind: "success" | "error" } | null) => void }) {
@@ -437,17 +416,6 @@ function AutoblogPanel({ data, setData, request, onReload, setNotice }: { data: 
 }
 
 function StatusItem({ ready, label }: { ready: boolean; label: string }) { return <span className={ready ? "ready" : "missing"}>{ready ? <CheckCircle2 /> : <AlertTriangle />}<strong>{label}</strong><small>{ready ? "Ready" : "Secret missing"}</small></span>; }
-
-function LeadConversation({ lead, request }: { lead: Row; request: AdminRequest }) {
-  const [messages, setMessages] = useState<Row[]>([]);
-  const [busy, setBusy] = useState(false);
-  const [status, setStatus] = useState("");
-  const loadMessages = useCallback(async () => { const result = await request(`/api/admin/leads/messages?leadId=${encodeURIComponent(asString(lead.id))}`); setMessages(result.messages || []); }, [lead.id, request]);
-  useEffect(() => { loadMessages().catch(() => undefined); }, [loadMessages]);
-  const sync = async () => { setBusy(true); setStatus(""); try { const result = await request("/api/admin/leads/messages", { method: "POST", body: JSON.stringify({ leadId: lead.id, action: "sync" }) }); await loadMessages(); setStatus(`${result.imported || 0} new mailbox message${result.imported === 1 ? "" : "s"} imported.`); } catch (error) { setStatus(error instanceof Error ? error.message : "Mailbox sync failed."); } finally { setBusy(false); } };
-  const send = async (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); setBusy(true); setStatus(""); const values = Object.fromEntries(new FormData(event.currentTarget)); try { await request("/api/admin/leads/messages", { method: "POST", body: JSON.stringify({ leadId: lead.id, subject: values.subject, message: values.message }) }); event.currentTarget.reset(); await loadMessages(); setStatus("Reply sent from the connected Microsoft mailbox."); } catch (error) { setStatus(error instanceof Error ? error.message : "Reply failed."); } finally { setBusy(false); } };
-  return <section className="admin-form-section wide lead-conversation"><div className="admin-form-section-head"><h3>Conversation</h3><span>Send from Microsoft and bring recent Outlook replies into this lead record.</span></div><div className="lead-thread">{messages.length ? messages.map(message => <article className={asString(message.direction)} key={asString(message.id)}><div><strong>{asString(message.direction) === "outbound" ? "You" : asString(lead.name)}</strong><time>{formatDate(message.sent_at, true)}</time></div><b>{asString(message.subject)}</b><p>{asString(message.body_text)}</p></article>) : <div className="admin-empty-compact"><Inbox /><span><strong>No synced messages</strong><small>Connect Microsoft, then sync replies or send the first response here.</small></span></div>}</div><div className="lead-thread-actions"><button className="button button-ghost" onClick={sync} disabled={busy}><RefreshCw className={busy ? "spin" : ""} size={16} /> Sync Outlook</button></div><form className="lead-composer" onSubmit={send}><label>Subject<input name="subject" defaultValue={`Re: Your Build With Duke enquiry`} required minLength={3} /></label><label>Message<textarea name="message" rows={6} placeholder={`Hi ${asString(lead.name).split(" ")[0]},\n\nThanks for getting in touch…`} required minLength={2} /></label><button className="button button-primary" disabled={busy}><Send size={16} /> {busy ? "Working…" : "Send with Microsoft"}</button></form>{status && <p className="admin-conversation-status" role="status">{status}</p>}</section>;
-}
 
 function AdminField({ field, value, record, busy, onChange, onUpload }: { field: Field; value: unknown; record: Row; busy: boolean; onChange: (value: unknown) => void; onUpload: (event: ChangeEvent<HTMLInputElement>) => void }) {
   const inputId = `admin-${field.key}`;
