@@ -4,7 +4,7 @@ import { CONTACT_EMAIL, GITHUB_URL, INSTAGRAM_URL, LINKEDIN_URL, PHONE_DISPLAY, 
 
 export type PricingTier = (typeof fallbackPricing)[number];
 export type Testimonial = { id: string; authorName: string; authorRole?: string; company?: string; quote: string };
-export type BlogPost = { id: string; slug: string; title: string; excerpt: string; body?: string; publishedAt?: string };
+export type BlogPost = { id: string; slug: string; title: string; excerpt: string; body?: string; publishedAt?: string; seoTitle?: string; metaDescription?: string; focusKeyword?: string; sourceUrls?: string[]; aiGenerated?: boolean };
 export type SiteSettings = {
   business_name: string; contact_email: string; phone_number: string; phone_display: string; whatsapp_number: string;
   service_area: string; response_time: string; github_url: string; instagram_url: string; linkedin_url: string; accepting_projects: string;
@@ -96,7 +96,7 @@ export function ContentProvider({ children }: { children: ReactNode }) {
       note: String(row.description), features: json<string[]>(row.features, []), popular: Boolean(row.is_popular),
     })) : fallbackPricing.map(tier => ({ ...tier, price: localizePrice(tier.price, currency) }));
     const testimonials = (remote.testimonials || []).map(row => ({ id: String(row.id), authorName: String(row.author_name), authorRole: String(row.author_role || ""), company: String(row.company || ""), quote: String(row.quote) }));
-    const blogPosts = (remote.blogPosts || []).map(row => ({ id: String(row.id), slug: String(row.slug), title: String(row.title), excerpt: String(row.excerpt || ""), body: String(row.body || ""), publishedAt: String(row.published_at || "") }));
+    const blogPosts = (remote.blogPosts || []).map(row => ({ id: String(row.id), slug: String(row.slug), title: String(row.title), excerpt: String(row.excerpt || ""), body: String(row.body || ""), publishedAt: String(row.published_at || ""), seoTitle: String(row.seo_title || ""), metaDescription: String(row.meta_description || ""), focusKeyword: String(row.focus_keyword || ""), sourceUrls: json<string[]>(row.source_urls, []), aiGenerated: Boolean(row.ai_generated) }));
     const settings = { ...defaultSettings, ...Object.fromEntries((remote.settings || []).map(row => [String(row.key), String(row.value)])) } as SiteSettings;
     return { projects, pricing, currency, testimonials, blogPosts, settings, loading };
   }, [remote, loading, currency]);

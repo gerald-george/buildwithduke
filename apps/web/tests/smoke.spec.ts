@@ -85,7 +85,7 @@ test("below-fold content reveals when it enters the viewport", async ({ page }) 
   await expect(heading).toHaveClass(/is-visible/);
 });
 
-test("hero typing cursor and logo-only technology ticker render", async ({ page }) => {
+test("hero typing cursor and named technology ticker render", async ({ page }) => {
   await page.goto("/");
   const output = page.locator(".typing-output");
   await expect(output).toBeVisible();
@@ -93,7 +93,11 @@ test("hero typing cursor and logo-only technology ticker render", async ({ page 
   expect(cursor).not.toBe("none");
   await expect(page.locator(".stack-ticker")).toBeVisible();
   await expect(page.locator(".ticker-item svg").first()).toBeVisible();
-  await expect(page.locator(".ticker-item b")).toHaveCount(0);
+  await expect(page.locator(".ticker-group").first().getByText("React", { exact: true })).toBeVisible();
+  await expect(page.locator(".ticker-group").first().getByText("OpenRouter", { exact: true })).toBeVisible();
+  await expect(page.locator(".ticker-group").first().getByText("Python", { exact: true })).toBeVisible();
+  await expect(page.locator(".ticker-group").first().getByText("Streamlit", { exact: true })).toBeVisible();
+  await expect(page.locator(".ticker-group").first().getByText("WordPress", { exact: true })).toBeVisible();
   await expect(page.locator(".ticker-group")).toHaveCount(2);
   const tickerWidths = await page.locator(".ticker-group").evaluateAll(groups => groups.map(group => group.getBoundingClientRect().width));
   expect(tickerWidths[0]).toBeCloseTo(tickerWidths[1], 2);
@@ -156,6 +160,18 @@ test("footer uses the public brand credit", async ({ page }) => {
   await expect(page.getByText(/built with/).last()).toContainText("built with");
 });
 
+test("contact fast-lane copy and business facts have responsive structure", async ({ page }) => {
+  await page.goto("/contact");
+  const note = page.locator(".contact-note");
+  await expect(note.getByText("Prefer the fast lane?", { exact: true })).toBeVisible();
+  await expect(note.getByText("WhatsApp is often the quickest route for a first conversation.", { exact: true })).toBeVisible();
+  await expect(note.locator("strong")).toHaveCSS("display", "block");
+  const facts = page.locator(".business-facts");
+  await expect(facts.getByText("Full-stack web development and AI automation consultancy", { exact: true })).toBeVisible();
+  await expect(facts.getByText("Monday–Friday, 09:00–18:00 GMT/BST", { exact: true })).toBeVisible();
+  await expect(facts.getByText("Bank transfer only", { exact: true })).toBeVisible();
+});
+
 test("cookie preferences open as a centred dialog and persist", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Cookie preferences" }).click();
@@ -191,6 +207,21 @@ test("authenticated admin uses friendly forms and a rich article editor", async 
   await expect(page.getByRole("toolbar", { name: "Article formatting" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Bold" })).toBeVisible();
   await expect(page.locator(".rich-editor .tiptap")).toBeVisible();
+});
+
+test("admin exposes Microsoft lead communication and configurable autoblogging", async ({ page }) => {
+  await page.route("**/api/admin/session", route => route.fulfill({ json: { ok: true, csrf: "test-csrf" } }));
+  await page.route("**/api/admin/data?module=overview", route => route.fulfill({ json: { counts: {}, newLeads: 0, draftPosts: 0, publishedPosts: 0, recentLeads: [] } }));
+  await page.route("**/api/admin/microsoft", route => route.fulfill({ json: { configured: true, connected: false } }));
+  await page.route("**/api/admin/autoblog", route => route.fulfill({ json: { configured: { openrouter: true, serpapi: true, scheduler: true }, settings: { id: "primary", enabled: 0, interval_hours: 168, topics: '["AI automation for UK small businesses"]', model: "openrouter/free", search_country: "uk", search_language: "en", publish_mode: "draft", min_words: 900, max_posts_per_month: 4, similarity_threshold: 0.58, next_run_at: null }, runs: [] } }));
+  await page.goto("/admin");
+  await page.getByRole("button", { name: /Integrations Microsoft mailbox/ }).click();
+  await expect(page.getByRole("heading", { name: "Connect Outlook" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Connect Microsoft account" })).toBeEnabled();
+  await page.getByRole("button", { name: /Autoblog Research/ }).click();
+  await expect(page.getByRole("heading", { name: "Cadence and editorial brief" })).toBeVisible();
+  await expect(page.locator('input[value="openrouter/free"]')).toBeVisible();
+  await expect(page.getByText("Draft review is the safest default.", { exact: false })).toBeVisible();
 });
 
 test("published article routes render rich content after sanitizing it", async ({ page }) => {

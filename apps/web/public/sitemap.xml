@@ -1,23 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://buildwithduke.pages.dev/</loc><priority>1.0</priority></url>
-  <url><loc>https://buildwithduke.pages.dev/projects</loc><priority>0.9</priority></url>
-  <url><loc>https://buildwithduke.pages.dev/projects/eventstreamhd</loc></url>
-  <url><loc>https://buildwithduke.pages.dev/projects/files-combiner</loc></url>
-  <url><loc>https://buildwithduke.pages.dev/projects/fraser-james</loc></url>
-  <url><loc>https://buildwithduke.pages.dev/projects/koha-isbd</loc></url>
-  <url><loc>https://buildwithduke.pages.dev/projects/sora-studio</loc></url>
-  <url><loc>https://buildwithduke.pages.dev/projects/n8n-workflows</loc></url>
-  <url><loc>https://buildwithduke.pages.dev/projects/the-grills-corner</loc></url>
-  <url><loc>https://buildwithduke.pages.dev/projects/home-away-travels</loc></url>
-  <url><loc>https://buildwithduke.pages.dev/projects/unconventional-soccer</loc></url>
-  <url><loc>https://buildwithduke.pages.dev/services</loc></url>
-  <url><loc>https://buildwithduke.pages.dev/pricing</loc></url>
-  <url><loc>https://buildwithduke.pages.dev/about</loc></url>
-  <url><loc>https://buildwithduke.pages.dev/contact</loc><priority>0.9</priority></url>
-  <url><loc>https://buildwithduke.pages.dev/cv</loc></url>
-  <url><loc>https://buildwithduke.pages.dev/blog</loc></url>
-  <url><loc>https://buildwithduke.pages.dev/privacy</loc></url>
-  <url><loc>https://buildwithduke.pages.dev/cookies</loc></url>
-  <url><loc>https://buildwithduke.pages.dev/terms</loc></url>
-</urlset>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <sitemap><loc>https://buildwithduke.pages.dev/api/sitemap.xml</loc></sitemap>
+</sitemapindex>

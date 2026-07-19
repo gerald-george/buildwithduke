@@ -11,7 +11,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
       rows(env.DB, "SELECT * FROM projects ORDER BY featured DESC, sort_order ASC, created_at DESC"),
       rows(env.DB, "SELECT * FROM pricing_tiers ORDER BY sort_order ASC"),
       rows(env.DB, "SELECT * FROM testimonials ORDER BY sort_order ASC"),
-      rows(env.DB, "SELECT id, slug, title, excerpt, body, published_at FROM blog_posts WHERE status = 'published' ORDER BY published_at DESC"),
+      rows(env.DB, "SELECT id, slug, title, excerpt, body, published_at, seo_title, meta_description, focus_keyword, source_urls, ai_generated FROM blog_posts WHERE status = 'published' AND (published_at IS NULL OR published_at <= datetime('now')) ORDER BY published_at DESC"),
       rows(env.DB, "SELECT key, value FROM business_settings WHERE key IN ('business_name','contact_email','phone_number','phone_display','whatsapp_number','service_area','response_time','github_url','instagram_url','linkedin_url','accepting_projects') ORDER BY key ASC"),
     ]);
     return Response.json({ projects, pricing, testimonials, blogPosts, settings }, { headers: { "Cache-Control": "public, max-age=60, s-maxage=300" } });

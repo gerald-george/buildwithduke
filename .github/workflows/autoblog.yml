@@ -1,0 +1,26 @@
+name: Scheduled autoblog
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: buildwithduke-autoblog
+  cancel-in-progress: false
+
+jobs:
+  create-article-if-due:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ask the protected scheduler to run
+        env:
+          AUTOBLOG_CRON_SECRET: ${{ secrets.AUTOBLOG_CRON_SECRET }}
+        run: |
+          curl --fail-with-body --retry 2 --max-time 120 \
+            --request POST \
+            --header "Authorization: Bearer ${AUTOBLOG_CRON_SECRET}" \
+            https://buildwithduke.pages.dev/api/autoblog/run

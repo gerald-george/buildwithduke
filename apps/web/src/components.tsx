@@ -1,7 +1,11 @@
 import { CSSProperties, FormEvent, KeyboardEvent, PointerEvent as ReactPointerEvent, ReactNode, useEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { ArrowUpRight, Check, ChevronDown, Cookie, Github, Instagram, Linkedin, Menu, MessageCircle, Moon, Send, Sun, Terminal, X } from "lucide-react";
-import { SiClaude, SiCloudflare, SiDrizzle, SiN8N, SiNextdotjs, SiNodedotjs, SiReact, SiTypescript, SiVite } from "react-icons/si";
+import {
+  SiClaude, SiCloudflare, SiDrizzle, SiFfmpeg, SiGithubactions, SiGooglesheets, SiJavascript, SiN8N,
+  SiNextdotjs, SiNodedotjs, SiOpenrouter, SiPerl, SiPython, SiReact, SiStreamlit, SiTelegram,
+  SiTypescript, SiVite, SiWordpress,
+} from "react-icons/si";
 import { TbBrandOpenai } from "react-icons/tb";
 import { RevealHeading, usePageMotion } from "./motion";
 import { useContent } from "./content";
@@ -16,7 +20,7 @@ export function Logo() {
     <svg className="brand-mark" aria-hidden="true" width="42" height="42" viewBox="0 0 1080 1080">
       <use href="/logo.svg#brand-logo" />
     </svg>
-    <span className="logo-wordmark" aria-hidden="true"><span className="brand-syntax">&lt;</span><span className="brand-build">BUILD</span><span className="brand-with"> WITH </span><span className="brand-duke">DUKE</span><span className="brand-syntax">/&gt;</span></span>
+    <span className="logo-wordmark" aria-hidden="true"><span className="brand-syntax">&lt;</span><span className="brand-build">BUILD</span><span className="brand-with">{`\u00a0WITH\u00a0`}</span><span className="brand-duke">DUKE</span><span className="brand-syntax">/&gt;</span></span>
   </Link>;
 }
 
@@ -95,7 +99,11 @@ function Footer() {
       <div><span className="kicker">Start a conversation</span><a href={`mailto:${settings.contact_email}`}>{settings.contact_email}</a><a href={whatsappUrl} target="_blank" rel="noreferrer">WhatsApp · {settings.phone_display} <ArrowUpRight size={14} /></a></div>
       <div><span className="kicker">Find me</span><a href={settings.github_url} target="_blank" rel="noreferrer"><Github size={15} /> GitHub</a><a href={settings.instagram_url} target="_blank" rel="noreferrer"><Instagram size={15} /> Instagram</a><a href={settings.linkedin_url} target="_blank" rel="noreferrer"><Linkedin size={15} /> LinkedIn</a></div>
     </div>
-    <div className="shell business-facts" aria-label="Business facts"><span>{settings.business_name} · {businessFacts.industry}</span><span>{settings.service_area} · {businessFacts.hours}</span><span>{businessFacts.paymentMethods}</span></div>
+    <div className="shell business-facts" aria-label="Business facts">
+      <div><small>Studio</small><strong>{settings.business_name}</strong><span>{businessFacts.industry}</span></div>
+      <div><small>Availability</small><strong>{settings.service_area}</strong><span>{businessFacts.hours}</span></div>
+      <div><small>Payments</small><strong>{businessFacts.paymentMethods}</strong><span>Details shared privately after an agreed quote.</span></div>
+    </div>
     <div className="shell footer-bottom"><span>© {new Date().getFullYear()} {settings.business_name}</span><span><Link to="/privacy">Privacy</Link> · <Link to="/cookies">Cookies</Link> · <Link to="/terms">Terms</Link> · <button className="footer-preferences" onClick={() => window.dispatchEvent(new Event("open-cookie-preferences"))}>Cookie preferences</button></span><Link className="built-with-love" to="/about">// built with <span role="img" aria-label="love">❤️</span></Link></div>
   </footer>;
 }
@@ -111,11 +119,14 @@ export function SectionHead({ label, title, copy }: { label: string; title: stri
 const technologies = [
   [SiReact, "React"], [SiTypescript, "TypeScript"], [SiCloudflare, "Cloudflare"],
   [SiNextdotjs, "Next.js"], [SiN8N, "n8n"], [TbBrandOpenai, "OpenAI"],
-  [SiClaude, "Claude"], [SiNodedotjs, "Node.js"], [SiDrizzle, "Drizzle"], [SiVite, "Vite"],
+  [SiClaude, "Claude"], [SiOpenrouter, "OpenRouter"], [SiPython, "Python"], [SiStreamlit, "Streamlit"],
+  [SiJavascript, "JavaScript"], [SiNodedotjs, "Node.js"], [SiDrizzle, "Drizzle"], [SiVite, "Vite"],
+  [SiPerl, "Perl"], [SiWordpress, "WordPress"], [SiFfmpeg, "FFmpeg"], [SiGooglesheets, "Google Sheets"],
+  [SiTelegram, "Telegram"], [SiGithubactions, "GitHub Actions"],
 ] as const;
 
 export function TechTicker() {
-  return <div className="stack-ticker" aria-label="Technology stack"><div className="ticker-track">{[false, true].map(duplicate => <div className="ticker-group" aria-hidden={duplicate || undefined} key={String(duplicate)}>{technologies.map(([Icon, label]) => <span className="ticker-item" key={label} aria-label={duplicate ? undefined : label} title={label}><Icon /></span>)}</div>)}</div></div>;
+  return <div className="stack-ticker" aria-label="Technology stack"><div className="ticker-track">{[false, true].map(duplicate => <div className="ticker-group" aria-hidden={duplicate || undefined} key={String(duplicate)}>{technologies.map(([Icon, label]) => <span className="ticker-item" key={label} aria-label={duplicate ? undefined : label} title={label}><Icon /><b>{label}</b></span>)}</div>)}</div></div>;
 }
 
 export function ProjectVisual({ image, title }: { image: string; title: string }) {

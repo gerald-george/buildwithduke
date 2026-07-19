@@ -1,16 +1,18 @@
-import { ChangeEvent, FormEvent, ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, Dispatch, FormEvent, ReactNode, SetStateAction, useCallback, useEffect, useMemo, useState } from "react";
 import {
-  ArrowLeft, ArrowRight, BarChart3, BookOpen, BriefcaseBusiness, Check, CheckCircle2, ChevronRight, CircleDollarSign,
-  Clock3, Command, Copy, Database, Download, ExternalLink, FileText, Image as ImageIcon, LayoutDashboard, LockKeyhole,
-  LogOut, Mail, MessageSquareQuote, Plus, RefreshCw, Save, Search, Settings2, SlidersHorizontal, Tag, Trash2, Upload,
-  Users, X,
+  AlertTriangle, ArrowLeft, ArrowRight, BarChart3, BookOpen, Bot, BriefcaseBusiness, Cable, Check, CheckCircle2,
+  ChevronRight, CircleDollarSign, Clock3, Command, Copy, Database, Download, ExternalLink, FileText, Image as ImageIcon,
+  Inbox, LayoutDashboard, LockKeyhole, LogOut, Mail, MessageSquareQuote, Play, Plus, RefreshCw, Save, Search, Send,
+  Settings2, ShieldCheck, SlidersHorizontal, Tag, Trash2, Unplug, Upload, Users, X,
 } from "lucide-react";
 import { IconBox, TerminalWindow } from "./components";
 import AdminRichTextEditor from "./AdminRichTextEditor";
 
 type DataModule = "projects" | "testimonials" | "pricing" | "leads" | "commands" | "posts" | "settings";
-type Module = "overview" | DataModule;
+type SpecialModule = "integrations" | "automation";
+type Module = "overview" | DataModule | SpecialModule;
 type Row = Record<string, unknown>;
+type AdminRequest = (url: string, init?: RequestInit) => Promise<Record<string, any>>;
 type FieldType = "text" | "email" | "url" | "textarea" | "number" | "select" | "toggle" | "tags" | "keyvalue" | "datetime" | "richtext" | "media" | "readonly" | "setting-value";
 type Field = {
   key: string; label: string; type: FieldType; group: string; help?: string; placeholder?: string; required?: boolean;
@@ -19,6 +21,8 @@ type Field = {
 type Overview = {
   counts: Partial<Record<DataModule, number>>; newLeads: number; draftPosts: number; publishedPosts: number; recentLeads: Row[];
 };
+type MicrosoftStatus = { configured: boolean; connected: boolean; connection?: { account_email?: string; account_name?: string; connected_at?: string; scopes?: string } };
+type AutoblogData = { settings: Row | null; runs: Row[]; configured: { openrouter: boolean; serpapi: boolean; scheduler: boolean } };
 
 const dataModules: DataModule[] = ["projects", "testimonials", "pricing", "leads", "commands", "posts", "settings"];
 const emptyRecords = (): Record<DataModule, Row[]> => ({ projects: [], testimonials: [], pricing: [], leads: [], commands: [], posts: [], settings: [] });
@@ -30,6 +34,8 @@ const modules: Array<{ key: Module; label: string; copy: string; icon: typeof La
   { key: "pricing", label: "Pricing", copy: "Packages, features and priority", icon: CircleDollarSign },
   { key: "leads", label: "Leads", copy: "Enquiries and sales status", icon: Users },
   { key: "posts", label: "Articles", copy: "Build log drafts and publishing", icon: BookOpen },
+  { key: "automation", label: "Autoblog", copy: "Research, cadence and originality", icon: Bot },
+  { key: "integrations", label: "Integrations", copy: "Microsoft mailbox connection", icon: Cable },
   { key: "commands", label: "DAEMON", copy: "Terminal commands and actions", icon: Command },
   { key: "settings", label: "Settings", copy: "Public business details", icon: Settings2 },
 ];
@@ -40,7 +46,7 @@ const templates: Record<DataModule, Row> = {
   pricing: { name: "", price_gbp: 0, description: "", features: "[]", is_popular: 0, sort_order: 0 },
   leads: { status: "new" },
   commands: { command: "", response_text: "", action_type: "text", action_target: "", is_active: 1 },
-  posts: { slug: "", title: "", excerpt: "", body: "", status: "draft", published_at: null },
+  posts: { slug: "", title: "", excerpt: "", seo_title: "", meta_description: "", focus_keyword: "", source_urls: "[]", body: "", status: "draft", published_at: null },
   settings: { key: "contact_email", value: "" },
 };
 
@@ -122,6 +128,10 @@ const fields: Record<DataModule, Field[]> = {
     { key: "title", label: "Article title", type: "text", group: "Article details", required: true },
     { key: "slug", label: "URL slug", type: "text", group: "Article details", required: true, help: "Lowercase letters, numbers and hyphens only." },
     { key: "excerpt", label: "Summary", type: "textarea", group: "Article details", rows: 3, help: "Used on the build-log listing and in search previews." },
+    { key: "seo_title", label: "SEO title", type: "text", group: "Search appearance", help: "Optional. Aim for 50–60 characters; the article title is the fallback." },
+    { key: "meta_description", label: "Meta description", type: "textarea", group: "Search appearance", rows: 2, help: "Optional. Aim for a useful 140–160 character summary." },
+    { key: "focus_keyword", label: "Focus phrase", type: "text", group: "Search appearance", help: "A planning aid, never an instruction to stuff keywords." },
+    { key: "source_urls", label: "Research sources", type: "tags", group: "Search appearance", placeholder: "Add a source URL and press Enter" },
     { key: "body", label: "Article content", type: "richtext", group: "Content", required: true },
     { key: "status", label: "Publishing status", type: "select", group: "Publishing", options: postStatusOptions },
     { key: "published_at", label: "Publish date and time", type: "datetime", group: "Publishing", help: "Automatically set when publishing if left empty." },
@@ -158,6 +168,8 @@ export default function Admin() {
   const [filter, setFilter] = useState("all");
   const [notice, setNotice] = useState<{ text: string; kind: "success" | "error" } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [microsoft, setMicrosoft] = useState<MicrosoftStatus>({ configured: false, connected: false });
+  const [autoblog, setAutoblog] = useState<AutoblogData>({ settings: null, runs: [], configured: { openrouter: false, serpapi: false, scheduler: false } });
 
   const request = useCallback(async (url: string, init: RequestInit = {}) => {
     const response = await fetch(url, { ...init, headers: { ...(init.body ? { "content-type": "application/json" } : {}), ...(csrf ? { "x-csrf-token": csrf } : {}), ...init.headers } });
@@ -169,9 +181,13 @@ export default function Admin() {
   const load = useCallback(async (next: Module, quiet = false) => {
     if (!quiet) setBusy(true);
     try {
-      const body = await request(`/api/admin/data?module=${next}`);
-      if (next === "overview") setOverview(body as Overview);
-      else setRecords(current => ({ ...current, [next]: body.rows || [] }));
+      if (next === "integrations") setMicrosoft(await request("/api/admin/microsoft") as MicrosoftStatus);
+      else if (next === "automation") setAutoblog(await request("/api/admin/autoblog") as AutoblogData);
+      else {
+        const body = await request(`/api/admin/data?module=${next}`);
+        if (next === "overview") setOverview(body as Overview);
+        else setRecords(current => ({ ...current, [next]: body.rows || [] }));
+      }
     } catch (error) {
       setNotice({ text: error instanceof Error ? error.message : "Could not load data.", kind: "error" });
     } finally { if (!quiet) setBusy(false); }
@@ -184,6 +200,13 @@ export default function Admin() {
     }).catch(() => setAuthenticated(false));
   }, []);
   useEffect(() => { if (authenticated) load(module); }, [authenticated, module, load]);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (!params.has("microsoft")) return;
+    setModule("integrations");
+    setNotice({ text: params.get("microsoft") === "connected" ? "Microsoft account connected successfully." : params.get("detail") || "Microsoft connection failed.", kind: params.get("microsoft") === "connected" ? "success" : "error" });
+    window.history.replaceState({}, "", "/admin");
+  }, []);
 
   const dirty = Boolean(editing && JSON.stringify(editing) !== original);
   useEffect(() => {
@@ -206,8 +229,9 @@ export default function Admin() {
   };
 
   const openEditor = (row?: Row) => {
-    if (module === "overview") return;
-    const next = structuredClone(row || templates[module]);
+    if (!dataModules.includes(module as DataModule)) return;
+    const dataModule = module as DataModule;
+    const next = structuredClone(row || templates[dataModule]);
     setEditing(next); setOriginal(JSON.stringify(next)); setNotice(null); window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -220,8 +244,9 @@ export default function Admin() {
   });
 
   const validate = (value: Row) => {
-    if (module === "overview") return "Nothing to save.";
-    const missing = fields[module].find(field => field.required && field.type !== "readonly" && (field.type === "tags" ? !parseList(value[field.key]).length : !asString(value[field.key]).trim()));
+    if (!dataModules.includes(module as DataModule)) return "Nothing to save.";
+    const dataModule = module as DataModule;
+    const missing = fields[dataModule].find(field => field.required && field.type !== "readonly" && (field.type === "tags" ? !parseList(value[field.key]).length : !asString(value[field.key]).trim()));
     if (missing) return `${missing.label} is required.`;
     if ((module === "projects" || module === "posts") && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(asString(value.slug))) return "Use a lowercase URL slug with letters, numbers and single hyphens.";
     if (module === "settings" && records.settings.some(row => row.key === value.key && row.id !== value.id)) return "That public setting already exists. Edit the existing setting instead.";
@@ -229,7 +254,7 @@ export default function Admin() {
   };
 
   const save = async () => {
-    if (!editing || module === "overview") return;
+    if (!editing || !dataModules.includes(module as DataModule)) return;
     const value = { ...editing };
     if (module === "posts" && value.status === "published" && !value.published_at) value.published_at = new Date().toISOString();
     const error = validate(value);
@@ -260,19 +285,19 @@ export default function Admin() {
   };
 
   const duplicate = (row: Row) => {
-    if (module === "overview" || module === "leads") return;
+    if (!dataModules.includes(module as DataModule) || module === "leads") return;
     const next = structuredClone(row);
     ["id", "created_at", "published_at"].forEach(key => delete next[key]);
     if ("title" in next) next.title = `${next.title} (copy)`;
     if ("name" in next) next.name = `${next.name} (copy)`;
     if ("slug" in next) next.slug = `${asString(next.slug)}-copy`;
     if (module === "posts") next.status = "draft";
-    setEditing(next); setOriginal(JSON.stringify(templates[module])); setNotice({ text: "Review the copy, then save it as a new record.", kind: "success" });
+    setEditing(next); setOriginal(JSON.stringify(templates[module as DataModule])); setNotice({ text: "Review the copy, then save it as a new record.", kind: "success" });
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const remove = async (row: Row) => {
-    if (module === "overview" || module === "leads") return;
+    if (!dataModules.includes(module as DataModule) || module === "leads") return;
     if (!window.confirm(`Delete “${recordTitle(row)}”? This cannot be undone.`)) return;
     setBusy(true); setNotice(null);
     try {
@@ -288,7 +313,7 @@ export default function Admin() {
     setAuthenticated(false); setCsrf(""); setEditing(null);
   };
 
-  const rows = module === "overview" ? [] : records[module];
+  const rows = dataModules.includes(module as DataModule) ? records[module as DataModule] : [];
   const filteredRows = useMemo(() => rows.filter(row => {
     const haystack = Object.values(row).map(asString).join(" ").toLowerCase();
     const matchesQuery = !query || haystack.includes(query.toLowerCase());
@@ -308,13 +333,13 @@ export default function Admin() {
   const current = modules.find(item => item.key === module)!;
   return <section className="admin-dashboard"><div className="admin-shell">
     <header className="admin-title"><div><span className="kicker">Secure content workspace</span><h1>Build With Duke</h1><p>Manage the portfolio, publishing and enquiries from one place.</p></div><div className="admin-title-actions"><a className="button button-ghost" href="/" target="_blank" rel="noreferrer">View site <ExternalLink size={16} /></a><button className="button button-ghost" onClick={logout}><LogOut size={16} /> Sign out</button></div></header>
-    <div className="admin-layout"><nav className="admin-modules" aria-label="Admin modules">{modules.map(item => { const ModuleIcon = item.icon; return <button className={module === item.key ? "active" : ""} key={item.key} onClick={() => navigateModule(item.key)}><ModuleIcon size={17} /><span><strong>{item.label}</strong><small>{item.copy}</small></span>{item.key !== "overview" && <em>{overview.counts[item.key] ?? records[item.key].length}</em>}</button>; })}</nav>
+    <div className="admin-layout"><nav className="admin-modules" aria-label="Admin modules">{modules.map(item => { const ModuleIcon = item.icon; const isData = dataModules.includes(item.key as DataModule); return <button className={module === item.key ? "active" : ""} key={item.key} onClick={() => navigateModule(item.key)}><ModuleIcon size={17} /><span><strong>{item.label}</strong><small>{item.copy}</small></span>{isData && <em>{overview.counts[item.key as DataModule] ?? records[item.key as DataModule].length}</em>}</button>; })}</nav>
       <main className="admin-workspace">
-        <div className="admin-toolbar"><div>{editing && <button className="admin-back" onClick={() => navigateModule(module)}><ArrowLeft size={15} /> Back to {current.label.toLowerCase()}</button>}<span className="kicker">{editing ? `${editing.id ? "Edit" : "Create"} ${singular(module)}` : current.label}</span><h2>{editing ? recordTitle(editing) || `New ${singular(module)}` : module === "overview" ? "Workspace overview" : `${rows.length} record${rows.length === 1 ? "" : "s"}`}</h2>{!editing && <p>{current.copy}</p>}</div>{!editing && <div>{module === "leads" && <button className="button button-ghost" onClick={exportLeads}><Download size={16} /> Export CSV</button>}<button className="button button-ghost" onClick={() => load(module)} disabled={busy}><RefreshCw className={busy ? "spin" : ""} size={16} /> Refresh</button>{module !== "overview" && module !== "leads" && <button className="button button-primary" onClick={() => openEditor()}><Plus size={16} /> Add {singular(module)}</button>}</div>}</div>
+        <div className="admin-toolbar"><div>{editing && <button className="admin-back" onClick={() => navigateModule(module)}><ArrowLeft size={15} /> Back to {current.label.toLowerCase()}</button>}<span className="kicker">{editing ? `${editing.id ? "Edit" : "Create"} ${singular(module)}` : current.label}</span><h2>{editing ? recordTitle(editing) || `New ${singular(module)}` : module === "overview" ? "Workspace overview" : module === "automation" ? "Scheduled editorial engine" : module === "integrations" ? "Connected services" : `${rows.length} record${rows.length === 1 ? "" : "s"}`}</h2>{!editing && <p>{current.copy}</p>}</div>{!editing && <div>{module === "leads" && <button className="button button-ghost" onClick={exportLeads}><Download size={16} /> Export CSV</button>}<button className="button button-ghost" onClick={() => load(module)} disabled={busy}><RefreshCw className={busy ? "spin" : ""} size={16} /> Refresh</button>{dataModules.includes(module as DataModule) && module !== "leads" && <button className="button button-primary" onClick={() => openEditor()}><Plus size={16} /> Add {singular(module)}</button>}</div>}</div>
         {notice && <div className={`admin-notice ${notice.kind}`} role={notice.kind === "error" ? "alert" : "status"}>{notice.kind === "success" ? <CheckCircle2 size={18} /> : <X size={18} />}<span>{notice.text}</span><button onClick={() => setNotice(null)} aria-label="Dismiss message"><X size={15} /></button></div>}
-        {module === "overview" ? <OverviewPanel data={overview} onOpen={navigateModule} /> : editing ? <RecordEditor module={module} record={editing} busy={busy} onChange={updateField} onUpload={uploadMedia} onSave={save} onCancel={() => navigateModule(module)} /> : <>
+        {module === "overview" ? <OverviewPanel data={overview} onOpen={navigateModule} /> : module === "integrations" ? <MicrosoftPanel data={microsoft} request={request} onReload={() => load("integrations", true)} setNotice={setNotice} /> : module === "automation" ? <AutoblogPanel data={autoblog} setData={setAutoblog} request={request} onReload={() => load("automation", true)} setNotice={setNotice} /> : editing ? <RecordEditor module={module as DataModule} record={editing} busy={busy} request={request} onChange={updateField} onUpload={uploadMedia} onSave={save} onCancel={() => navigateModule(module)} /> : <>
           <div className="admin-list-tools"><label><Search size={16} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder={`Search ${current.label.toLowerCase()}…`} aria-label={`Search ${current.label}`} />{query && <button onClick={() => setQuery("")} aria-label="Clear search"><X size={14} /></button>}</label>{filterOptions(module) && <label className="admin-filter"><SlidersHorizontal size={15} /><select value={filter} onChange={event => setFilter(event.target.value)} aria-label="Filter records">{filterOptions(module)!.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>}</div>
-          <RecordList module={module} rows={filteredRows} loading={busy && rows.length === 0} query={query} onEdit={openEditor} onDuplicate={duplicate} onDelete={remove} />
+          <RecordList module={module as DataModule} rows={filteredRows} loading={busy && rows.length === 0} query={query} onEdit={openEditor} onDuplicate={duplicate} onDelete={remove} />
         </>}
       </main>
     </div>
@@ -344,12 +369,84 @@ function RecordList({ module, rows, loading, query, onEdit, onDuplicate, onDelet
   </article>)}</div>;
 }
 
-function RecordEditor({ module, record, busy, onChange, onUpload, onSave, onCancel }: { module: DataModule; record: Row; busy: boolean; onChange: (key: string, value: unknown) => void; onUpload: (event: ChangeEvent<HTMLInputElement>, field: string) => void; onSave: () => void; onCancel: () => void }) {
+function RecordEditor({ module, record, busy, request, onChange, onUpload, onSave, onCancel }: { module: DataModule; record: Row; busy: boolean; request: AdminRequest; onChange: (key: string, value: unknown) => void; onUpload: (event: ChangeEvent<HTMLInputElement>, field: string) => void; onSave: () => void; onCancel: () => void }) {
   const groups = [...new Set(fields[module].map(field => field.group))];
   return <div className="admin-form">{module === "leads" && <div className="lead-contact-actions"><a className="button button-primary" href={`mailto:${asString(record.email)}`}><Mail size={16} /> Email {asString(record.name).split(" ")[0]}</a>{asString(record.email) && <button className="button button-ghost" onClick={() => navigator.clipboard.writeText(asString(record.email))}><Copy size={15} /> Copy email</button>}</div>}
     {groups.map(group => <section className={`admin-form-section ${group === "Content" ? "wide" : ""}`} key={group}><div className="admin-form-section-head"><h3>{group}</h3><span>{sectionHelp(module, group)}</span></div><div className="admin-fields">{fields[module].filter(field => field.group === group).map(field => <AdminField key={field.key} field={field} value={record[field.key]} record={record} busy={busy} onChange={value => onChange(field.key, value)} onUpload={event => onUpload(event, field.key)} />)}</div></section>)}
+    {module === "leads" && Boolean(record.id) && <LeadConversation lead={record} request={request} />}
     <div className="admin-savebar"><div>{record.id ? <><Check size={17} /><span>Editing an existing {singular(module)}</span></> : <><Plus size={17} /><span>Creating a new {singular(module)}</span></>}</div><div><button className="button button-ghost" onClick={onCancel} disabled={busy}>Cancel</button><button className="button button-primary" onClick={onSave} disabled={busy}><Save size={16} /> {busy ? "Saving…" : module === "leads" ? "Update status" : "Save record"}</button></div></div>
   </div>;
+}
+
+function MicrosoftPanel({ data, request, onReload, setNotice }: { data: MicrosoftStatus; request: AdminRequest; onReload: () => Promise<void>; setNotice: (notice: { text: string; kind: "success" | "error" } | null) => void }) {
+  const [busy, setBusy] = useState(false);
+  const connect = async () => {
+    setBusy(true); setNotice(null);
+    try { const result = await request("/api/admin/microsoft", { method: "POST", body: "{}" }); window.location.assign(String(result.url)); }
+    catch (error) { setNotice({ text: error instanceof Error ? error.message : "Microsoft connection failed.", kind: "error" }); setBusy(false); }
+  };
+  const disconnect = async () => {
+    if (!window.confirm("Disconnect this Microsoft mailbox? Existing lead history will remain in the dashboard.")) return;
+    setBusy(true); setNotice(null);
+    try { await request("/api/admin/microsoft", { method: "DELETE", body: "{}" }); await onReload(); setNotice({ text: "Microsoft mailbox disconnected.", kind: "success" }); }
+    catch (error) { setNotice({ text: error instanceof Error ? error.message : "Could not disconnect Microsoft.", kind: "error" }); }
+    finally { setBusy(false); }
+  };
+  return <div className="integration-grid"><section className="admin-panel integration-card"><div className="integration-brand"><span><Cable /></span><div><span className="kicker">Microsoft Graph</span><h3>{data.connected ? "Mailbox connected" : "Connect Outlook"}</h3></div><StatusBadge value={data.connected ? "active" : data.configured ? "ready" : "inactive"} /></div>
+    {data.connected ? <><div className="integration-account"><strong>{data.connection?.account_name || "Microsoft account"}</strong><span>{data.connection?.account_email}</span><small>Connected {formatDate(data.connection?.connected_at)}</small></div><div className="integration-actions"><button className="button button-ghost" onClick={disconnect} disabled={busy}><Unplug size={16} /> Disconnect</button></div></> : <><p>Connect the mailbox that should receive enquiry alerts and send lead replies. Tokens remain encrypted in D1 and never reach the browser.</p><button className="button button-primary" onClick={connect} disabled={busy || !data.configured}><Cable size={16} /> {busy ? "Opening Microsoft…" : "Connect Microsoft account"}</button>{!data.configured && <div className="admin-inline-warning"><AlertTriangle size={16} /><span>Add the Microsoft client ID, client secret and encryption key to Cloudflare before connecting.</span></div>}</>}
+  </section><section className="admin-panel integration-capabilities"><div className="admin-panel-head"><div><span className="kicker">What it enables</span><h3>One lead workflow</h3></div><ShieldCheck /></div><ul><li><Mail /> Form-submission alerts in your Microsoft inbox</li><li><Send /> Personal replies sent from the connected mailbox</li><li><Inbox /> Recent lead replies synchronised into the dashboard</li><li><ShieldCheck /> Refresh tokens encrypted at rest and revocable at any time</li></ul></section></div>;
+}
+
+function AutoblogPanel({ data, setData, request, onReload, setNotice }: { data: AutoblogData; setData: Dispatch<SetStateAction<AutoblogData>>; request: AdminRequest; onReload: () => Promise<void>; setNotice: (notice: { text: string; kind: "success" | "error" } | null) => void }) {
+  const [busy, setBusy] = useState(false);
+  const settings = data.settings;
+  const update = (key: string, value: unknown) => setData(current => ({ ...current, settings: { ...(current.settings || {}), [key]: value } }));
+  const topics = parseList(settings?.topics).join("\n");
+  const save = async () => {
+    if (!settings) return;
+    setBusy(true); setNotice(null);
+    try {
+      const next = { ...settings, topics: topics.split("\n").map(item => item.trim()).filter(Boolean) };
+      await request("/api/admin/autoblog", { method: "PUT", body: JSON.stringify({ settings: next }) }); await onReload();
+      setNotice({ text: "Autoblog settings saved. The hourly scheduler will create an article only when it is due.", kind: "success" });
+    } catch (error) { setNotice({ text: error instanceof Error ? error.message : "Could not save autoblog settings.", kind: "error" }); }
+    finally { setBusy(false); }
+  };
+  const run = async () => {
+    setBusy(true); setNotice(null);
+    try { const result = await request("/api/admin/autoblog", { method: "POST", body: "{}" }); await Promise.all([onReload()]); setNotice({ text: result.status === "created" ? `Created “${result.title}” as ${result.publishMode}.` : result.message || "Run complete.", kind: "success" }); }
+    catch (error) { await onReload(); setNotice({ text: error instanceof Error ? error.message : "The autoblog run failed.", kind: "error" }); }
+    finally { setBusy(false); }
+  };
+  if (!settings) return <div className="admin-empty"><Bot /><h3>Autoblog migration required</h3><p>Apply migration 0003 before configuring scheduled publishing.</p></div>;
+  return <div className="autoblog-layout"><section className="admin-panel autoblog-status"><div className="admin-panel-head"><div><span className="kicker">Readiness</span><h3>Editorial safeguards</h3></div><Bot /></div><div className="integration-status-row"><StatusItem ready={data.configured.openrouter} label="OpenRouter" /><StatusItem ready={data.configured.serpapi} label="SerpApi" /><StatusItem ready={data.configured.scheduler} label="Scheduler" /></div><p>Every run researches current results, creates source-backed original copy, checks it against the latest 100 articles, and respects the monthly cap. Draft review is the safest default.</p></section>
+    <section className="admin-panel autoblog-config"><div className="admin-panel-head"><div><span className="kicker">Configuration</span><h3>Cadence and editorial brief</h3></div><button className="button button-ghost" onClick={run} disabled={busy || !data.configured.openrouter || !data.configured.serpapi}><Play size={16} /> Run now</button></div><div className="autoblog-fields">
+      <label className="admin-toggle"><span><strong>Scheduled creation</strong><small>The scheduler still enforces cadence and monthly limits.</small></span><input type="checkbox" checked={asBoolean(settings.enabled)} onChange={event => update("enabled", event.target.checked ? 1 : 0)} /><i><span /></i></label>
+      <label><span>OpenRouter model</span><input value={asString(settings.model)} onChange={event => update("model", event.target.value)} placeholder="openrouter/free" /></label>
+      <label><span>Interval (hours)</span><input type="number" min="6" max="2160" value={asString(settings.interval_hours)} onChange={event => update("interval_hours", Number(event.target.value))} /></label>
+      <label><span>Maximum posts per month</span><input type="number" min="1" max="31" value={asString(settings.max_posts_per_month)} onChange={event => update("max_posts_per_month", Number(event.target.value))} /></label>
+      <label><span>Minimum article words</span><input type="number" min="600" max="3000" value={asString(settings.min_words)} onChange={event => update("min_words", Number(event.target.value))} /></label>
+      <label><span>Similarity rejection threshold</span><input type="number" min="0.35" max="0.85" step="0.01" value={asString(settings.similarity_threshold)} onChange={event => update("similarity_threshold", Number(event.target.value))} /><small>Lower is stricter. 0.58 is a cautious default.</small></label>
+      <label><span>Publishing mode</span><select value={asString(settings.publish_mode)} onChange={event => update("publish_mode", event.target.value)}><option value="draft">Create drafts for review</option><option value="published">Publish automatically</option></select></label>
+      <label><span>Search country</span><input value={asString(settings.search_country)} maxLength={2} onChange={event => update("search_country", event.target.value.toLowerCase())} /></label>
+      <label><span>Search language</span><input value={asString(settings.search_language)} maxLength={2} onChange={event => update("search_language", event.target.value.toLowerCase())} /></label>
+      <label className="wide"><span>Topic lanes — one per line</span><textarea rows={6} value={topics} onChange={event => update("topics", JSON.stringify(event.target.value.split("\n")))} /></label>
+    </div><div className="autoblog-save"><span>Next due: {settings.next_run_at ? formatDate(settings.next_run_at, true) : "after enabling"}</span><button className="button button-primary" onClick={save} disabled={busy}><Save size={16} /> {busy ? "Working…" : "Save automation"}</button></div></section>
+    <section className="admin-panel autoblog-runs"><div className="admin-panel-head"><div><span className="kicker">Audit trail</span><h3>Recent runs</h3></div><RefreshCw /></div>{data.runs.length ? <div>{data.runs.map(runItem => <article key={asString(runItem.id)}><StatusBadge value={asString(runItem.status)} /><span><strong>{asString(runItem.query) || "Scheduled check"}</strong><small>{asString(runItem.message) || "Run in progress"}</small></span><time>{formatDate(runItem.started_at, true)}</time></article>)}</div> : <div className="admin-empty-compact"><Clock3 /><span><strong>No runs yet</strong><small>Use Run now to test the configured pipeline.</small></span></div>}</section>
+  </div>;
+}
+
+function StatusItem({ ready, label }: { ready: boolean; label: string }) { return <span className={ready ? "ready" : "missing"}>{ready ? <CheckCircle2 /> : <AlertTriangle />}<strong>{label}</strong><small>{ready ? "Ready" : "Secret missing"}</small></span>; }
+
+function LeadConversation({ lead, request }: { lead: Row; request: AdminRequest }) {
+  const [messages, setMessages] = useState<Row[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState("");
+  const loadMessages = useCallback(async () => { const result = await request(`/api/admin/leads/messages?leadId=${encodeURIComponent(asString(lead.id))}`); setMessages(result.messages || []); }, [lead.id, request]);
+  useEffect(() => { loadMessages().catch(() => undefined); }, [loadMessages]);
+  const sync = async () => { setBusy(true); setStatus(""); try { const result = await request("/api/admin/leads/messages", { method: "POST", body: JSON.stringify({ leadId: lead.id, action: "sync" }) }); await loadMessages(); setStatus(`${result.imported || 0} new mailbox message${result.imported === 1 ? "" : "s"} imported.`); } catch (error) { setStatus(error instanceof Error ? error.message : "Mailbox sync failed."); } finally { setBusy(false); } };
+  const send = async (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); setBusy(true); setStatus(""); const values = Object.fromEntries(new FormData(event.currentTarget)); try { await request("/api/admin/leads/messages", { method: "POST", body: JSON.stringify({ leadId: lead.id, subject: values.subject, message: values.message }) }); event.currentTarget.reset(); await loadMessages(); setStatus("Reply sent from the connected Microsoft mailbox."); } catch (error) { setStatus(error instanceof Error ? error.message : "Reply failed."); } finally { setBusy(false); } };
+  return <section className="admin-form-section wide lead-conversation"><div className="admin-form-section-head"><h3>Conversation</h3><span>Send from Microsoft and bring recent Outlook replies into this lead record.</span></div><div className="lead-thread">{messages.length ? messages.map(message => <article className={asString(message.direction)} key={asString(message.id)}><div><strong>{asString(message.direction) === "outbound" ? "You" : asString(lead.name)}</strong><time>{formatDate(message.sent_at, true)}</time></div><b>{asString(message.subject)}</b><p>{asString(message.body_text)}</p></article>) : <div className="admin-empty-compact"><Inbox /><span><strong>No synced messages</strong><small>Connect Microsoft, then sync replies or send the first response here.</small></span></div>}</div><div className="lead-thread-actions"><button className="button button-ghost" onClick={sync} disabled={busy}><RefreshCw className={busy ? "spin" : ""} size={16} /> Sync Outlook</button></div><form className="lead-composer" onSubmit={send}><label>Subject<input name="subject" defaultValue={`Re: Your Build With Duke enquiry`} required minLength={3} /></label><label>Message<textarea name="message" rows={6} placeholder={`Hi ${asString(lead.name).split(" ")[0]},\n\nThanks for getting in touch…`} required minLength={2} /></label><button className="button button-primary" disabled={busy}><Send size={16} /> {busy ? "Working…" : "Send with Microsoft"}</button></form>{status && <p className="admin-conversation-status" role="status">{status}</p>}</section>;
 }
 
 function AdminField({ field, value, record, busy, onChange, onUpload }: { field: Field; value: unknown; record: Row; busy: boolean; onChange: (value: unknown) => void; onUpload: (event: ChangeEvent<HTMLInputElement>) => void }) {
@@ -403,7 +500,7 @@ function filterOptions(module: DataModule) {
   if (module === "projects") return [{ value: "all", label: "All categories" }, ...categoryOptions];
   return null;
 }
-function singular(module: Module) { return ({ overview: "item", projects: "project", testimonials: "testimonial", pricing: "package", leads: "lead", commands: "command", posts: "article", settings: "setting" } as const)[module]; }
+function singular(module: Module) { return ({ overview: "item", projects: "project", testimonials: "testimonial", pricing: "package", leads: "lead", commands: "command", posts: "article", settings: "setting", integrations: "integration", automation: "automation" } as const)[module]; }
 function recordTitle(row: Row) { return asString(row.title || row.name || row.author_name || row.command || row.email || settingDefinitions.find(item => item.value === row.key)?.label || row.key || "Untitled record"); }
 function recordDescription(module: DataModule, row: Row) { return asString(module === "leads" ? row.message : module === "posts" ? row.excerpt : module === "settings" ? row.value : row.description || row.quote || row.response_text || "").replace(/<[^>]*>/g, " ").slice(0, 170); }
 function recordMeta(module: DataModule, row: Row) {

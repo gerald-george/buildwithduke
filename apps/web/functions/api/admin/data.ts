@@ -1,4 +1,5 @@
 import { AdminEnv, requireAdmin } from "./_auth";
+import { sanitizeArticleHtml } from "../_shared/html";
 
 type ModuleName = keyof typeof definitions;
 type RecordValue = Record<string, unknown>;
@@ -8,7 +9,7 @@ const definitions = {
   pricing: { table: "pricing_tiers", columns: ["name", "price_gbp", "description", "features", "is_popular", "sort_order"], order: "sort_order ASC" },
   leads: { table: "leads", columns: ["status"], order: "created_at DESC" },
   commands: { table: "daemon_commands", columns: ["command", "response_text", "action_type", "action_target", "is_active"], order: "command ASC" },
-  posts: { table: "blog_posts", columns: ["slug", "title", "excerpt", "body", "status", "published_at"], order: "created_at DESC" },
+  posts: { table: "blog_posts", columns: ["slug", "title", "excerpt", "body", "status", "published_at", "seo_title", "meta_description", "focus_keyword", "source_urls", "ai_generated", "ai_model", "content_fingerprint"], order: "created_at DESC" },
   settings: { table: "business_settings", columns: ["key", "value"], order: "key ASC" },
 } as const;
 
@@ -57,6 +58,7 @@ async function mutate({ request, env }: EventContext<AdminEnv, string, unknown>,
     return Response.json({ ok: true });
   }
   const record = body.record || {};
+  if (body.module === "posts" && typeof record.body === "string") record.body = sanitizeArticleHtml(record.body);
   const validationError = validateRecord(body.module as ModuleName, record);
   if (validationError) return Response.json({ error: validationError }, { status: 400 });
   const columns = definition.columns.filter(column => Object.prototype.hasOwnProperty.call(record, column));
@@ -93,6 +95,13 @@ function validateRecord(module: ModuleName, record: RecordValue) {
   if ((module === "projects" || module === "posts") && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(String(record.slug || ""))) return "The URL slug must contain lowercase letters, numbers and single hyphens only.";
   if (module === "leads" && !leadStatuses.includes(String(record.status))) return "Choose a valid lead status.";
   if (module === "posts" && !postStatuses.includes(String(record.status))) return "Choose a valid publishing status.";
+  if (module === "posts" && String(record.seo_title || "").length > 80) return "Keep the SEO title at 80 characters or fewer.";
+  if (module === "posts" && String(record.meta_description || "").length > 180) return "Keep the meta description at 180 characters or fewer.";
+  if (module === "posts" && record.source_urls) {
+    let sourceUrls: unknown = record.source_urls;
+    try { if (typeof sourceUrls === "string") sourceUrls = JSON.parse(sourceUrls); } catch { return "Research sources must be a list of URLs."; }
+    if (!Array.isArray(sourceUrls) || sourceUrls.some(value => !isHttpUrl(value))) return "Every research source must use an http or https URL.";
+  }
   if (module === "projects" && !["Web development", "AI automation", "Software"].includes(String(record.category))) return "Choose a valid project category.";
   if (module === "settings" && !publicSettingKeys.includes(String(record.key) as typeof publicSettingKeys[number])) return "Choose an approved public business setting.";
   if (module === "settings" && String(record.key).endsWith("_url") && !isHttpUrl(record.value)) return "Public social links must use an http or https URL.";
