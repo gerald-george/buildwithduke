@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 test.beforeEach(async ({ page }) => {
+  await page.route(/https:\/\/(?:fonts\.(?:googleapis|gstatic)\.com|challenges\.cloudflare\.com)\/.*/, route => route.abort());
   await page.addInitScript(() => localStorage.setItem("cookie-preferences", JSON.stringify({ necessary: true, analytics: false, marketing: false })));
 });
 
@@ -46,13 +47,20 @@ test("navigation works at the current viewport", async ({ page, isMobile }) => {
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Straightforward pricing");
 });
 
-test("DAEMON executes a real navigation command", async ({ page, isMobile }) => {
+test("site guide executes a real navigation request", async ({ page, isMobile }) => {
   await page.goto("/");
-  if (isMobile) await page.getByRole("button", { name: "DAEMON online" }).click();
-  const command = page.getByLabel("$", { exact: true });
+  if (isMobile) await page.getByRole("button", { name: "Site guide" }).click();
+  const command = page.getByLabel("Ask", { exact: true });
   await command.fill("projects");
   await command.press("Enter");
   await expect(page).toHaveURL(/\/projects$/);
+});
+
+test("visitor guide visibility comes from managed settings with no public toggle", async ({ page }) => {
+  await page.route("**/api/content", route => route.fulfill({ json: { settings: [{ key: "visitor_guide_enabled", value: "false" }] } }));
+  await page.goto("/");
+  await expect(page.getByLabel("Interactive site guide")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /enable|disable|show|hide.*guide/i })).toHaveCount(0);
 });
 
 test("brand wordmark and updated Growth pricing are rendered", async ({ page }) => {
@@ -122,12 +130,12 @@ test("project previews include accessible glitch and static hover layers", async
   await expect(preview.locator(".project-static")).toHaveAttribute("aria-hidden", "true");
 });
 
-test("DAEMON can be repositioned with its drag handle", async ({ page, isMobile }) => {
+test("site guide can be repositioned with its drag handle", async ({ page, isMobile }) => {
   test.skip(isMobile, "Desktop drag behavior becomes a bottom sheet on mobile.");
   await page.goto("/");
-  const daemon = page.getByLabel("DAEMON interactive terminal");
+  const daemon = page.getByLabel("Interactive site guide");
   const handle = page.locator(".daemon-bar");
-  await expect(handle.locator("strong")).toHaveText("DAEMON");
+  await expect(handle.locator("strong")).toHaveText("Site guide");
   const before = await daemon.boundingBox();
   const box = await handle.boundingBox();
   expect(before && box).toBeTruthy();
@@ -139,10 +147,14 @@ test("DAEMON can be repositioned with its drag handle", async ({ page, isMobile 
   expect(after && before && Math.abs(after.x - before.x)).toBeGreaterThan(50);
 });
 
-test("About portrait reveals with glitch layers and CV content reflects source documents", async ({ page }) => {
+test("About portrait keeps hover glitch without a scroll reveal and CV content reflects source documents", async ({ page }) => {
   await page.goto("/about");
   await expect(page.locator(".portrait-media > img")).toHaveCount(2);
   await expect(page.locator(".portrait-static")).toHaveCount(1);
+  await expect(page.locator(".portrait-media > img").first()).toHaveCSS("animation-name", "none");
+  await expect(page.locator(".portrait-glitch")).toHaveCSS("animation-name", "none");
+  await page.locator(".portrait-frame").hover();
+  await expect(page.locator(".portrait-glitch")).toHaveCSS("animation-name", "portrait-glitch-hover");
   await expect(page.getByText("B.LIS · CGPA 4.6/5.0", { exact: true })).toBeVisible();
   await page.goto("/cv");
   await expect(page.getByText("Digital Marketer & Web Manager", { exact: true })).toBeVisible();
@@ -153,17 +165,17 @@ test("About portrait reveals with glitch layers and CV content reflects source d
   await expect(download).toHaveCSS("background-color", "rgb(74, 222, 128)");
 });
 
-test("DAEMON window controls minimize, maximize and close", async ({ page, isMobile }) => {
+test("site guide window controls minimize, maximize and close", async ({ page, isMobile }) => {
   test.skip(isMobile, "Desktop window controls are covered by the mobile bottom-sheet behavior.");
   await page.goto("/");
-  const daemon = page.getByLabel("DAEMON interactive terminal");
-  await page.getByRole("button", { name: "Minimize terminal" }).click();
+  const daemon = page.getByLabel("Interactive site guide");
+  await page.getByRole("button", { name: "Minimize site guide" }).click();
   await expect(daemon).toHaveClass(/minimized/);
-  await page.getByRole("button", { name: "Restore terminal" }).click();
-  await page.getByRole("button", { name: "Maximize terminal" }).click();
+  await page.getByRole("button", { name: "Restore site guide" }).click();
+  await page.getByRole("button", { name: "Maximize site guide" }).click();
   await expect(daemon).toHaveClass(/maximized/);
-  await page.getByRole("button", { name: "Close terminal" }).click();
-  await expect(page.getByRole("button", { name: "Open DAEMON terminal" })).toBeVisible();
+  await page.getByRole("button", { name: "Close site guide" }).click();
+  await expect(page.getByRole("button", { name: "Open site guide" })).toBeVisible();
 });
 
 test("footer uses the public brand credit", async ({ page }) => {
@@ -204,23 +216,41 @@ test("authenticated admin uses friendly forms and a rich article editor", async 
     const module = new URL(route.request().url()).searchParams.get("module");
     if (module === "overview") return route.fulfill({ json: { counts: { projects: 1, testimonials: 0, pricing: 0, leads: 0, commands: 0, posts: 0, settings: 0 }, newLeads: 0, draftPosts: 0, publishedPosts: 0, recentLeads: [] } });
     if (module === "projects") return route.fulfill({ json: { rows: [{ id: "project-1", slug: "example", title: "Example project", description: "A real project", category: "Software", stack: "[]", result_metrics: "{}", screenshot_r2_keys: "[]", featured: 0, demo_flag: 0, sort_order: 0 }] } });
+    if (module === "settings") return route.fulfill({ json: { rows: [{ id: "setting-guide", key: "visitor_guide_enabled", value: "true" }] } });
     return route.fulfill({ json: { rows: [] } });
   });
   await page.goto("/admin");
   await expect(page.getByRole("heading", { name: "Workspace overview" })).toBeVisible();
-  await expect(page.getByLabel("DAEMON interactive terminal")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Enable DAEMON on admin" })).toBeVisible();
+  await expect(page.getByLabel("Interactive site guide")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /DAEMON on admin/ })).toHaveCount(0);
   await page.getByRole("button", { name: /Projects Case studies/ }).click();
   await page.getByRole("button", { name: "Add project" }).click();
   await expect(page.getByLabel("Project title")).toBeVisible();
   await expect(page.getByLabel("Category")).toBeVisible();
   await expect(page.getByText("Feature this project")).toBeVisible();
+  await expect(page.getByText("Upload gallery images")).toBeVisible();
   await expect(page.getByLabel("Record JSON")).toHaveCount(0);
-  await page.getByRole("button", { name: /Articles Build log/ }).click();
+  await page.getByRole("button", { name: /Articles Article drafts/ }).click();
   await page.getByRole("button", { name: "Add article" }).click();
+  await expect(page.getByText("Upload image")).toBeVisible();
   await expect(page.getByRole("toolbar", { name: "Article formatting" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Bold" })).toBeVisible();
   await expect(page.locator(".rich-editor .tiptap")).toBeVisible();
+});
+
+test("admin owns the visitor guide visibility setting", async ({ page }) => {
+  await page.route("**/api/admin/session", route => route.fulfill({ json: { ok: true, csrf: "test-csrf" } }));
+  await page.route("**/api/admin/data?module=*", route => {
+    const module = new URL(route.request().url()).searchParams.get("module");
+    if (module === "overview") return route.fulfill({ json: { counts: { settings: 1 }, newLeads: 0, draftPosts: 0, publishedPosts: 0, recentLeads: [] } });
+    if (module === "settings") return route.fulfill({ json: { rows: [{ id: "setting-guide", key: "visitor_guide_enabled", value: "true" }] } });
+    return route.fulfill({ json: { rows: [] } });
+  });
+  await page.goto("/admin");
+  await page.getByRole("button", { name: /Settings Business details/ }).click();
+  await page.getByRole("button", { name: "Edit Show visitor site guide" }).click();
+  await expect(page.getByRole("heading", { name: "Show visitor site guide" })).toBeVisible();
+  await expect(page.getByRole("checkbox")).toBeChecked();
 });
 
 test("admin turns non-JSON Function failures into an actionable error", async ({ page }) => {
@@ -247,9 +277,14 @@ test("admin exposes structured route, About and CV content without raw JSON", as
   await page.getByRole("button", { name: "Edit About" }).click();
   await expect(page.getByLabel("Hero title")).toHaveValue("Hi, I’m Duke.");
   await expect(page.getByLabel("Profile paragraph 1")).toBeVisible();
-  await expect(page.getByLabel("Credential titles")).toBeVisible();
+  await expect(page.getByLabel("Credential").first()).toBeVisible();
   await expect(page.getByLabel("Record JSON")).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.getByRole("button", { name: "Back to pages" }).click();
+  await page.getByRole("button", { name: "Edit CV" }).click();
+  await expect(page.getByText("CV builder", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Role").first()).toBeVisible();
+  await expect(page.getByText("Upload PDF")).toBeVisible();
 });
 
 test("admin exposes free Gmail notifications and configurable autoblogging", async ({ page }) => {

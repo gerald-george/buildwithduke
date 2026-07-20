@@ -14,12 +14,12 @@ const legalDefaults: Record<"privacy" | "cookies" | "terms", PageContent> = {
   privacy: {
     hero_title: "Privacy policy", updated_date: "19 July 2026", hero_intro: "This policy explains what information I collect through buildwithduke, why I collect it, and the choices you have.",
     section_titles: ["Who controls your data", "What I collect", "Why and how long", "Your rights", "Service providers"],
-    section_copies: ["Duke Chijimaka Jonathan, trading as buildwithduke, is the data controller. Contact buildwithduke@outlook.com for any privacy request.", "When you send an enquiry, I collect your name, email, optional company, project details, consent record and the business correspondence needed to manage that enquiry. Basic server security logs may also record an IP address temporarily.", "I use enquiry data only to respond, prepare a proposal and keep necessary business records. Unconverted enquiries are reviewed and deleted after 12 months.", "Under UK data protection law you may ask to access, correct, erase, restrict or export your personal information, and you may object to processing.", "Cloudflare processes site delivery, security and stored lead data. Google Apps Script and Gmail process private contact-form notifications sent to the notification mailbox; business follow-up is handled separately through Outlook. SerpApi and OpenRouter process public research prompts for article automation, without receiving lead details. Data is not sold or used for unrelated marketing."],
+    section_copies: ["Duke Chijimaka Jonathan, trading as buildwithduke, is the data controller. Contact buildwithduke@outlook.com for any privacy request.", "When you send an enquiry, I collect your name, email, optional company, project details, consent record and the business correspondence needed to manage that enquiry. Basic security records may also include an IP address for a short time.", "I use enquiry data only to respond, prepare a proposal and keep necessary business records. Unconverted enquiries are reviewed and deleted after 12 months.", "Under UK data protection law you may ask to access, correct, erase, restrict or export your personal information, and you may object to processing.", "Trusted service providers help deliver and protect this site, store enquiries, send private notifications and research public topics for articles. They do not receive lead details unless needed to handle your enquiry. Data is not sold or used for unrelated marketing."],
   },
   cookies: {
     hero_title: "Cookie policy", updated_date: "17 July 2026", hero_intro: "This site starts with necessary storage only. Optional analytics and marketing stay off until you choose them.",
     section_titles: ["Necessary storage", "Analytics", "Marketing", "Changing your choice", "Third-party links"],
-    section_copies: ["The site stores your colour theme and cookie choice locally in your browser. These are required to remember the settings you selected.", "Anonymous analytics may be enabled only after consent and only when a production analytics provider is configured. It is used to understand performance and broad usage, not to build an advertising profile.", "No advertising trackers are currently installed. The separate marketing choice prevents future marketing technology from running without your explicit permission.", "Use the Cookie preferences button in the footer at any time to review or change optional consent. Your new choice takes effect immediately.", "Links to GitHub, Instagram, WhatsApp and live projects follow those services' own privacy and cookie policies once opened."],
+    section_copies: ["The site stores your colour theme and cookie choice locally in your browser. These are required to remember the settings you selected.", "Anonymous analytics can be used only after consent. It helps me understand broad site usage without building an advertising profile.", "No advertising trackers are currently used. The separate marketing choice prevents future marketing tools from running without your explicit permission.", "Use the Cookie preferences button in the footer at any time to review or change optional consent. Your new choice takes effect immediately.", "Links to GitHub, Instagram, WhatsApp and live projects follow those services' own privacy and cookie policies once opened."],
   },
   terms: {
     hero_title: "Website terms", updated_date: "17 July 2026", hero_intro: "These terms cover use of this portfolio. Project work is governed by a separate written proposal and contract.",
@@ -46,8 +46,8 @@ export const pageDefinitions: PageDefinition[] = [
       pricing_intro: "Clear scopes for common builds. Anything unusual gets a clear custom proposal.",
       testimonials_heading: "Kind words, kept specific.",
       faq_heading: "Straight answers.",
-      articles_heading: "Fresh from the build log.",
-      articles_intro: "Practical notes published from the same workspace that runs the site.",
+      articles_heading: "Fresh thinking from recent work.",
+      articles_intro: "Practical notes on building useful products and smoother ways of working.",
     },
   },
   {
@@ -70,17 +70,17 @@ export const pageDefinitions: PageDefinition[] = [
       hero_title: "Useful systems, not technology theatre.",
       hero_intro: "I design and build the shortest sensible route from a messy process to a system your team can actually operate.",
       service_1_title: "Websites & web apps",
-      service_1_copy: "Responsive, fast interfaces with the admin and data layer needed to keep them useful after launch.",
-      service_1_items: ["React and TypeScript builds", "Cloudflare deployment", "Admin and CRUD systems", "Technical SEO and analytics"],
+      service_1_copy: "Responsive, fast experiences with straightforward content controls that keep them useful after launch.",
+      service_1_items: ["Fast, responsive builds", "Reliable hosting and launch", "Easy content management", "Search visibility and analytics"],
       service_2_title: "AI automation",
       service_2_copy: "Agentic workflows that remove repetitive effort while keeping human judgement exactly where it matters.",
-      service_2_items: ["Workflow discovery", "API and model integration", "Human review steps", "Monitoring and handover"],
+      service_2_items: ["Workflow discovery", "Connected tools and AI", "Human review steps", "Monitoring and handover"],
       service_3_title: "n8n workflows",
       service_3_copy: "Observable automations for leads, content, CRM hygiene and the operational gaps between your tools.",
       service_3_items: ["Lead routing", "WordPress publishing", "CRM synchronisation", "Failure alerts"],
       service_4_title: "Systems improvement",
-      service_4_copy: "A practical technical pass on a workflow or product that has grown harder to operate than it should be.",
-      service_4_items: ["Architecture review", "Performance work", "Data cleanup", "Incremental rebuilds"],
+      service_4_copy: "A practical review of a workflow or product that has grown harder to operate than it should be.",
+      service_4_items: ["Product and workflow review", "Speed improvements", "Data cleanup", "Careful phased improvements"],
       callout_heading: "Not sure what the system should be yet?",
       callout_copy: "That is normal. Start with the bottleneck, not a shopping list of technology. I’ll help map the right scope before proposing a build.",
     },
@@ -105,6 +105,7 @@ export const pageDefinitions: PageDefinition[] = [
     content: {
       hero_title: "Hi, I’m Duke.",
       hero_intro: "I like systems, clean hand-offs, and the exact moment a complicated thing becomes understandable.",
+      headshot_image: "/headshot.png",
       profile_heading: "Library-science rigour. Product-builder energy.",
       profile_paragraph_1: "I’m a full-stack developer and AI automation specialist with a First-Class B.LIS (4.6/5.0) from the University of Port Harcourt. That information-science background still shapes the work: understand the information, understand the people, then make the system make sense.",
       profile_paragraph_2: "I build with React, Cloudflare, Python and n8n, using agentic AI-assisted workflows to move quickly without outsourcing judgement. The output still has to be testable, maintainable and useful when the novelty wears off.",
@@ -136,6 +137,8 @@ export const pageDefinitions: PageDefinition[] = [
     content: {
       hero_title: "The formal version.",
       hero_intro: "Experience, credentials and the work behind the quieter confidence.",
+      portrait_image: "/headshot.png",
+      cv_file: "/duke-chijimaka-jonathan-cv.pdf",
       sidebar_roles: ["Full-stack developer", "AI & automation specialist", "Information systems"],
       sidebar_location: "Port Harcourt, Nigeria · Remote",
       profile_copy: "Product-minded full-stack developer and automation specialist combining web engineering, agentic workflows and information-systems discipline. Experienced in shipping Cloudflare-hosted products, custom admin systems, AI pipelines and open-source library software.",
@@ -155,13 +158,13 @@ export const pageDefinitions: PageDefinition[] = [
   },
   {
     slug: "blog", name: "Articles", path: "/blog",
-    seoTitle: "Build log — buildwithduke",
+    seoTitle: "Articles — buildwithduke",
     metaDescription: "Practical notes on web systems, AI-assisted development and automation.",
     content: {
       hero_title: "Notes from the workbench.",
       hero_intro: "Clear writing on automation, web systems and the practical side of building with AI.",
-      empty_heading: "Notes are compiling.",
-      empty_copy: "Published build logs will appear here. I’m choosing useful writing over placeholder articles.",
+      empty_heading: "More notes are on the way.",
+      empty_copy: "In the meantime, explore the projects or get in touch to discuss what you are working on.",
     },
   },
   ...(["privacy", "cookies", "terms"] as const).map(slug => ({
@@ -181,8 +184,8 @@ export const pageDefinitions: PageDefinition[] = [
       cta_copy: "Good. That’s usually where the useful work starts.",
       footer_intro: "Full-stack products and useful automation.",
       footer_service_area: "Remote · UK-wide.",
-      not_found_heading: "That route wandered off.",
-      not_found_copy: "DAEMON checked twice. There is nothing deployed here.",
+      not_found_heading: "That page wandered off.",
+      not_found_copy: "The page may have moved, or the address might need another look.",
     },
   },
 ];
@@ -199,19 +202,24 @@ export function parsePageContent(value: unknown): PageContent {
 }
 
 export function pageFieldLabel(key: string) {
+  if (key === "cv_file") return "Downloadable CV (PDF)";
   return key.replace(/^service_(\d+)_/, "Service $1 ").replaceAll("_", " ").replace(/^./, character => character.toUpperCase());
 }
 
 export function pageFieldGroup(key: string) {
-  if (key.startsWith("hero_")) return "Page introduction";
+  if (key.startsWith("hero_") || key === "updated_date") return "Page introduction";
   if (key.startsWith("service_")) return `Service ${key.split("_")[1]}`;
-  if (key.startsWith("profile_")) return "Profile";
+  if (key.startsWith("profile_") || key === "headshot_image") return "Profile";
   if (key.startsWith("credential")) return "Credentials";
   if (key.startsWith("experience_")) return "Experience";
   if (key.startsWith("technical_")) return "Selected technical work";
   if (key.startsWith("education_")) return "Education";
   if (key.startsWith("certification_")) return "Certifications";
   if (key.startsWith("faq_")) return "Frequently asked questions";
+  if (key.startsWith("case_")) return "Case study";
+  if (key.startsWith("fast_lane_")) return "Quick contact";
+  if (key.startsWith("form_") || key === "message_placeholder" || key.endsWith("_message")) return "Enquiry form";
+  if (key.startsWith("empty_")) return "Empty articles state";
   if (key.startsWith("cta_") || key.startsWith("footer_") || key.startsWith("not_found_")) return "Shared content";
   return key.split("_")[0].replace(/^./, character => character.toUpperCase());
 }

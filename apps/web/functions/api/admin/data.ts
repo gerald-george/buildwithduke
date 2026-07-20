@@ -10,11 +10,11 @@ const definitions = {
   pricing: { table: "pricing_tiers", columns: ["name", "price_gbp", "description", "features", "is_popular", "sort_order"], order: "sort_order ASC" },
   leads: { table: "leads", columns: ["status"], order: "created_at DESC" },
   commands: { table: "daemon_commands", columns: ["command", "response_text", "action_type", "action_target", "is_active"], order: "command ASC" },
-  posts: { table: "blog_posts", columns: ["slug", "title", "excerpt", "body", "status", "published_at", "seo_title", "meta_description", "focus_keyword", "source_urls", "ai_generated", "ai_model", "content_fingerprint"], order: "created_at DESC" },
+  posts: { table: "blog_posts", columns: ["slug", "title", "excerpt", "body", "status", "published_at", "seo_title", "meta_description", "cover_image", "focus_keyword", "source_urls", "ai_generated", "ai_model", "content_fingerprint"], order: "created_at DESC" },
   settings: { table: "business_settings", columns: ["key", "value"], order: "key ASC" },
 } as const;
 
-const publicSettingKeys = ["business_name", "contact_email", "phone_number", "phone_display", "whatsapp_number", "service_area", "response_time", "github_url", "instagram_url", "linkedin_url", "accepting_projects"] as const;
+const publicSettingKeys = ["business_name", "contact_email", "phone_number", "phone_display", "whatsapp_number", "service_area", "response_time", "github_url", "instagram_url", "linkedin_url", "accepting_projects", "visitor_guide_enabled"] as const;
 const leadStatuses = ["new", "contacted", "quoted", "won", "lost"];
 const postStatuses = ["draft", "published"];
 const pageSlugs = ["home", "projects", "services", "pricing", "about", "contact", "cv", "blog", "privacy", "cookies", "terms", "common"];

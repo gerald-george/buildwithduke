@@ -1,6 +1,6 @@
 import { CSSProperties, FormEvent, KeyboardEvent, PointerEvent as ReactPointerEvent, ReactNode, useEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
-import { ArrowUpRight, Check, ChevronDown, Cookie, Github, Instagram, Linkedin, Menu, MessageCircle, Moon, Send, Sun, Terminal, X } from "lucide-react";
+import { ArrowUpRight, Check, ChevronDown, Cookie, Github, Instagram, Linkedin, Menu, MessageCircle, Moon, Send, Sun, X } from "lucide-react";
 import {
   SiClaude, SiCloudflare, SiDrizzle, SiFfmpeg, SiGithubactions, SiGooglesheets, SiJavascript, SiN8N,
   SiNextdotjs, SiNodedotjs, SiOpenrouter, SiPerl, SiPython, SiReact, SiStreamlit, SiTelegram,
@@ -30,14 +30,12 @@ export function Layout({ children }: { children: ReactNode }) {
   const [menu, setMenu] = useState(false);
   const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "dark");
   const location = useLocation();
+  const { settings } = useContent();
   const isAdmin = location.pathname.startsWith("/admin");
-  const daemonStorageKey = isAdmin ? "daemon-admin-enabled" : "daemon-public-enabled";
-  const [daemonEnabled, setDaemonEnabled] = useState(() => localStorage.getItem(window.location.pathname.startsWith("/admin") ? "daemon-admin-enabled" : "daemon-public-enabled") === "true" || (!window.location.pathname.startsWith("/admin") && localStorage.getItem("daemon-public-enabled") !== "false"));
   usePageMotion(location.pathname);
   useEffect(() => { document.documentElement.dataset.theme = theme; localStorage.setItem("theme", theme); }, [theme]);
   useEffect(() => { const update = (event: Event) => setTheme(String((event as CustomEvent<string>).detail)); window.addEventListener("daemon-theme", update); return () => window.removeEventListener("daemon-theme", update); }, []);
   useEffect(() => { setMenu(false); window.scrollTo({ top: 0, behavior: "instant" }); }, [location.pathname]);
-  useEffect(() => { const saved = localStorage.getItem(daemonStorageKey); setDaemonEnabled(saved == null ? !isAdmin : saved === "true"); }, [daemonStorageKey, isAdmin]);
   useEffect(() => {
     if (!menu || !window.matchMedia("(max-width: 900px)").matches) return;
     const overflow = document.body.style.overflow;
@@ -53,7 +51,6 @@ export function Layout({ children }: { children: ReactNode }) {
           {nav.map(([label, href]) => <NavLink key={href} to={href}>{label}</NavLink>)}
         </nav>
         <div className="header-actions">
-          <button className={`icon-button daemon-toggle ${daemonEnabled ? "active" : ""}`} onClick={() => setDaemonEnabled(value => { localStorage.setItem(daemonStorageKey, String(!value)); return !value; })} aria-pressed={daemonEnabled} aria-label={`${daemonEnabled ? "Disable" : "Enable"} DAEMON on ${isAdmin ? "admin" : "public pages"}`} title={`${daemonEnabled ? "Hide" : "Show"} DAEMON`}><Terminal size={18} /></button>
           <button className="icon-button" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`} title="Change colour theme">
             {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
           </button>
@@ -66,7 +63,7 @@ export function Layout({ children }: { children: ReactNode }) {
     <main id="main">{children}</main>
     <Footer />
     <ConsentAnalytics />
-    {daemonEnabled && <Daemon />}
+    {!isAdmin && settings.visitor_guide_enabled !== "false" && <Daemon />}
     <CookieConsent />
   </>;
 }
@@ -144,7 +141,7 @@ export function FAQ({ items }: { items: string[][] }) {
 }
 
 type Log = { id: number; text: string; tone?: string };
-const boot = ["booting daemon v2.0...", "loading awareness modules...", "checking signal... online", "hello. type 'help' to begin."];
+const boot = ["Hi — I can help you find your way around.", "Ask about projects, services, pricing or availability."];
 const normalizeCommand = (value: string) => value.toLowerCase().trim().replace(/[?!.,;:]+/g, " ").replace(/\s+/g, " ");
 
 function Daemon() {
@@ -158,7 +155,6 @@ function Daemon() {
   const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
   const [customCommands, setCustomCommands] = useState<Record<string, { response: string; action?: string; target?: string }>>({});
   const navigate = useNavigate();
-  const location = useLocation();
   const logId = useRef(10);
   const logEnd = useRef<HTMLDivElement>(null);
   const daemonRef = useRef<HTMLElement>(null);
@@ -204,8 +200,7 @@ function Daemon() {
 
   useEffect(() => {
     setLogs([]);
-    const timers = boot.map((text, i) => window.setTimeout(() => setLogs(old => [...old, { id: i, text, tone: i === 3 ? "green" : undefined }]), 350 + i * 430));
-    timers.push(window.setTimeout(() => addLog(`session: ${window.innerWidth}×${window.innerHeight} · ${new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`), 2250));
+    const timers = boot.map((text, i) => window.setTimeout(() => setLogs(old => [...old, { id: i, text, tone: i === 1 ? "green" : undefined }]), 250 + i * 350));
     return () => timers.forEach(clearTimeout);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -225,94 +220,10 @@ function Daemon() {
   }, []);
   useEffect(() => { if (logs.length) logEnd.current?.scrollIntoView({ behavior: "smooth" }); }, [logs]);
   useEffect(() => {
-    if (logs.length < 4) return;
-    addLog(`route mounted: ${location.pathname}`);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.pathname]);
-  useEffect(() => {
     fetch("/api/content/daemon").then(response => response.ok ? response.json() : Promise.reject()).then((data: { commands?: Array<{ command: string; response_text: string; action_type?: string; action_target?: string }> }) => {
       const mapped = Object.fromEntries((data.commands || []).map(item => [normalizeCommand(item.command), { response: item.response_text, action: item.action_type, target: item.action_target }]));
       setCustomCommands(mapped);
     }).catch(() => undefined);
-  }, []);
-  useEffect(() => {
-    let lastDepth = 0;
-    const onScroll = () => {
-      const depth = Math.min(100, Math.round((scrollY / Math.max(1, document.body.scrollHeight - innerHeight)) * 100));
-      const milestone = [25, 50, 75, 90].find(n => depth >= n && lastDepth < n);
-      if (milestone) addLog(`scroll depth: ${milestone}%`);
-      lastDepth = depth;
-    };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-  useEffect(() => {
-    let idleTimer = window.setTimeout(() => addLog("idle 12s — still there?"), 12000);
-    let pointerDistance = 0;
-    let lastX: number | null = null;
-    let lastY: number | null = null;
-    const resetIdle = () => {
-      window.clearTimeout(idleTimer);
-      idleTimer = window.setTimeout(() => addLog("idle 12s — still there?"), 12000);
-    };
-    const onPointer = (event: PointerEvent) => {
-      resetIdle();
-      if (lastX !== null && lastY !== null) pointerDistance += Math.hypot(event.clientX - lastX, event.clientY - lastY);
-      lastX = event.clientX; lastY = event.clientY;
-      if (pointerDistance >= 1400) {
-        addLog(`cursor moved ${Math.round(pointerDistance).toLocaleString("en-GB")}px`);
-        pointerDistance = 0;
-      }
-    };
-    const onClick = (event: MouseEvent) => {
-      resetIdle();
-      const target = (event.target as HTMLElement).closest<HTMLElement>("a, button");
-      const label = target?.innerText.trim().replace(/\s+/g, " ").slice(0, 42);
-      if (label) addLog(`visitor selected: ${label}`);
-    };
-    const onKey = () => resetIdle();
-    window.addEventListener("pointermove", onPointer, { passive: true });
-    window.addEventListener("click", onClick, { passive: true });
-    window.addEventListener("keydown", onKey);
-    return () => {
-      window.clearTimeout(idleTimer);
-      window.removeEventListener("pointermove", onPointer);
-      window.removeEventListener("click", onClick);
-      window.removeEventListener("keydown", onKey);
-    };
-  }, []);
-  useEffect(() => {
-    const sections = Array.from(document.querySelectorAll<HTMLElement>("main section"));
-    if (!("IntersectionObserver" in window)) return;
-    const seen = new WeakSet<Element>();
-    const observer = new IntersectionObserver(entries => entries.forEach(entry => {
-      if (!entry.isIntersecting || seen.has(entry.target)) return;
-      seen.add(entry.target);
-      const section = entry.target as HTMLElement;
-      const name = section.dataset.daemon || section.querySelector(".kicker")?.textContent || section.id;
-      if (name) addLog(`viewing: ${name.trim().slice(0, 48)}`);
-    }), { threshold: 0.45 });
-    sections.forEach(section => observer.observe(section));
-    return () => observer.disconnect();
-  }, [location.pathname]);
-  useEffect(() => {
-    const onOnline = () => addLog("network restored · online", "green");
-    const onOffline = () => addLog("network changed · offline");
-    const onVisibility = () => {
-      if (document.visibilityState === "visible") addLog("welcome back · session resumed", "green");
-    };
-    const themeObserver = new MutationObserver(() => addLog(`theme changed · ${document.documentElement.dataset.theme || "dark"}`));
-    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
-    window.addEventListener("online", onOnline);
-    window.addEventListener("offline", onOffline);
-    document.addEventListener("visibilitychange", onVisibility);
-    return () => {
-      themeObserver.disconnect();
-      window.removeEventListener("online", onOnline);
-      window.removeEventListener("offline", onOffline);
-      document.removeEventListener("visibilitychange", onVisibility);
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const run = (event: FormEvent) => {
@@ -320,20 +231,16 @@ function Daemon() {
     const rawValue = command.trim();
     const value = normalizeCommand(rawValue);
     if (!value) return;
-    if (/^(clear|cls|reset terminal)$/.test(value)) { setLogs([]); setCommand(""); return; }
-    addLog(`$ ${rawValue}`, "blue"); setCommand("");
+    if (/^(clear|reset)$/.test(value)) { setLogs([]); setCommand(""); return; }
+    addLog(`You: ${rawValue}`, "blue"); setCommand("");
     const replies: Record<string, string> = {
-      help: "Ask about work, services, pricing, availability, timelines, articles, skills, experience, education, contact, privacy or site navigation. Utilities: status · time · date · pwd · ls · theme · clear · sudo hire-duke.",
-      whoami: "Duke. Full-stack developer, automation specialist, systems enjoyer.",
-      coffee: "status: dangerously well-caffeinated.",
-      status: `${navigator.onLine ? "online" : "offline"} · ${location.pathname} · ${Math.round((scrollY / Math.max(1, document.body.scrollHeight - innerHeight)) * 100)}% explored`,
+      help: "Ask about Duke’s projects, services, pricing, availability, experience, articles or how to get in touch.",
+      whoami: "I’m the site guide. I can point you towards the information you need.",
+      coffee: "Duke takes his coffee seriously.",
       time: new Date().toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" }),
       date: new Date().toLocaleDateString("en-GB", { dateStyle: "full" }),
-      pwd: location.pathname,
-      ls: "projects/  services/  about/  cv/  pricing/  blog/  contact/  privacy/  cookies/  terms/",
-      theme: `current theme: ${document.documentElement.dataset.theme || "dark"}`,
-      hello: "hello. I’m awake and watching the system, not your personal data.",
-      hi: "hi. ask for 'status' or type 'help'.",
+      hello: "Hello. What would you like to know about Duke’s work?",
+      hi: "Hi. Ask me about projects, services, pricing or availability.",
     };
     const custom = customCommands[value];
     if (custom) {
@@ -364,19 +271,19 @@ function Daemon() {
       else if (/\b(whatsapp|phone number|telephone|call duke)\b/.test(value)) addLog(`Phone / WhatsApp: ${settings.phone_display}. The Contact page has a direct private link.`, "green");
       else if (/\b(email address|email duke|send email)\b/.test(value)) addLog(`Email: ${settings.contact_email}`, "green");
       else if (/\b(available|availability|booked|taking projects|open for work)\b/.test(value)) addLog(settings.accepting_projects === "true" ? `Duke is accepting select projects and usually replies ${settings.response_time}.` : `Duke is currently fully booked. You can still send an enquiry for the next opening.`, "green");
-      else if (/\b(tech|stack|skills?|tools?|languages?|frameworks?)\b/.test(value)) addLog("Core stack: React, TypeScript, Cloudflare, Node.js, Python, n8n, OpenRouter, Streamlit, Koha and practical API integrations.", "green");
+      else if (/\b(tech|stack|skills?|tools?|languages?|frameworks?)\b/.test(value)) addLog("Duke builds web products, automations and information systems. His CV and project case studies show the relevant skills in context.", "green");
       else if (/\b(how long|timeline|delivery|turnaround|weeks?)\b/.test(value)) addLog("Focused sites usually take 2–4 weeks. Product and automation timelines depend on integrations and content; milestones are agreed before development.", "green");
       else if (/\b(own|ownership|source code|intellectual property|ip rights)\b/.test(value)) addLog("The client owns the finished agreed work after final payment. Third-party licences are identified before they become dependencies.", "green");
       else if (/\b(revisions?|changes|amendments?)\b/.test(value)) addLog("Packages use structured review rounds so major decisions happen early and refinements stay predictable.", "green");
       else if (/\b(payment|pay|vat|invoice|bank)\b/.test(value)) addLog("Bank transfer is currently the only payment method. Payment details are shared privately after a quote; no VAT is currently charged.", "green");
       else if (/\b(where|location|based|remote|uk|nigeria)\b/.test(value)) addLog(`Duke is based in Port Harcourt, Nigeria and works remotely. Public service area: ${settings.service_area}.`, "green");
-      else if (/\b(automation|automate|n8n|workflow)\b/.test(value)) addLog("Duke maps repetitive work, keeps human review where judgement matters, then builds observable n8n or API workflows with failure handling.", "green");
-      else if (/\b(testimonials?|reviews?|feedback|clients?)\b/.test(value)) addLog("Verified client feedback appears on the home page when published from the admin workspace.", "green");
-      else if (/\b(daemon|terminal assistant|are you ai)\b/.test(value)) addLog("DAEMON is a deterministic site guide. It matches intents and admin-managed commands locally; it does not send your query to an AI model.", "green");
+      else if (/\b(automation|automate|n8n|workflow)\b/.test(value)) addLog("Duke can simplify repetitive work while keeping people involved wherever judgement matters.", "green");
+      else if (/\b(testimonials?|reviews?|feedback|clients?)\b/.test(value)) addLog("You can find client feedback alongside the featured work on the home page.", "green");
+      else if (/\b(daemon|terminal assistant|site guide|are you ai)\b/.test(value)) addLog("I’m the site guide. I help visitors find the right page or answer common questions.", "green");
       else if (/\b(faq|frequently asked|questions)\b/.test(value)) addLog("Pricing and the home page include practical FAQs about timing, ownership, revisions and automation.", "green");
       else if (/\b(latest|recent|new)\b.*\b(article|post|blog)\b/.test(value) && blogPosts[0]) addLog(`Latest article: “${blogPosts[0].title}”. Type its title to open it.`, "green");
-      else if (/\bhow much|what.*cost|packages?\b/.test(value)) addLog(`${pricing.length} pricing options are currently published. Type “pricing” to compare scopes and starting points.`, "green");
-      else if (/^(sudo )?(hire duke|hire-duke)$/.test(value) || /\b(start|build) (a |my )?project\b/.test(value)) { addLog("Opening the project enquiry…", "green"); window.setTimeout(() => navigate("/contact?intent=hire"), 350); }
+      else if (/\bhow much|what.*cost|packages?\b/.test(value)) addLog(`${pricing.length} pricing options are available. Type “pricing” to compare scopes and starting points.`, "green");
+      else if (/^(hire duke|hire-duke)$/.test(value) || /\b(start|build) (a |my )?project\b/.test(value)) { addLog("Opening the project enquiry…", "green"); window.setTimeout(() => navigate("/contact?intent=hire"), 350); }
       else if (/\b(hello|hi|hey|good morning|good afternoon|good evening)\b/.test(value)) addLog("Hello. Ask me about Duke’s work, services, pricing, experience or availability.", "green");
       else if (/\b(thanks|thank you|cheers)\b/.test(value)) addLog("You’re welcome. I’ll be here if you want another route or detail.", "green");
       else {
@@ -386,24 +293,24 @@ function Daemon() {
       }
     }
   };
-  if (dismissed) return <button className="daemon-orb" onClick={() => { setDismissed(false); setMinimized(false); setOpen(true); }} aria-label="Open DAEMON terminal"><Terminal size={20} /></button>;
+  if (dismissed) return <button className="daemon-orb" onClick={() => { setDismissed(false); setMinimized(false); setOpen(true); }} aria-label="Open site guide"><MessageCircle size={20} /></button>;
   const daemonStyle: CSSProperties | undefined = position ? { left: position.x, top: position.y, right: "auto", bottom: "auto" } : undefined;
   const daemonClass = ["daemon", open ? "open" : "", minimized ? "minimized" : "", maximized ? "maximized" : ""].filter(Boolean).join(" ");
-  return <aside ref={daemonRef} style={daemonStyle} className={daemonClass} aria-label="DAEMON interactive terminal">
-    <button className="daemon-mobile-trigger" onClick={() => { setOpen(true); setMinimized(false); }} aria-expanded={open}><Terminal size={18} /> <span>DAEMON</span><i>online</i></button>
+  return <aside ref={daemonRef} style={daemonStyle} className={daemonClass} aria-label="Interactive site guide">
+    <button className="daemon-mobile-trigger" onClick={() => { setOpen(true); setMinimized(false); }} aria-expanded={open}><MessageCircle size={18} /> <span>Site guide</span></button>
     <div className="daemon-panel">
-      <div className="daemon-bar" role="toolbar" tabIndex={0} aria-label="Move DAEMON terminal. Drag, or use the arrow keys." onPointerDown={beginDrag} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} onKeyDown={nudgeDaemon}>
+      <div className="daemon-bar" role="toolbar" tabIndex={0} aria-label="Move site guide. Drag, or use the arrow keys." onPointerDown={beginDrag} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} onKeyDown={nudgeDaemon}>
         <span className="daemon-controls">
-          <button className="daemon-control daemon-control-close" onClick={() => { setDismissed(true); setMaximized(false); }} aria-label="Close terminal" title="Close" />
-          <button className="daemon-control daemon-control-minimize" onClick={() => { setMinimized(value => !value); setMaximized(false); }} aria-label={minimized ? "Restore terminal" : "Minimize terminal"} title={minimized ? "Restore" : "Minimize"} />
-          <button className="daemon-control daemon-control-maximize" onClick={() => { setMaximized(value => !value); setMinimized(false); }} aria-label={maximized ? "Restore terminal" : "Maximize terminal"} title={maximized ? "Restore" : "Maximize"} />
+          <button className="daemon-control daemon-control-close" onClick={() => { setDismissed(true); setMaximized(false); }} aria-label="Close site guide" title="Close" />
+          <button className="daemon-control daemon-control-minimize" onClick={() => { setMinimized(value => !value); setMaximized(false); }} aria-label={minimized ? "Restore site guide" : "Minimize site guide"} title={minimized ? "Restore" : "Minimize"} />
+          <button className="daemon-control daemon-control-maximize" onClick={() => { setMaximized(value => !value); setMinimized(false); }} aria-label={maximized ? "Restore site guide" : "Maximize site guide"} title={maximized ? "Restore" : "Maximize"} />
         </span>
-        <strong>DAEMON</strong>
+        <strong>Site guide</strong>
       </div>
       <div className="daemon-content">
         <div className="daemon-logs" aria-live="polite">{logs.map(log => <div className={log.tone || ""} key={log.id}><span>›</span> {log.text}</div>)}<div ref={logEnd} /></div>
-        <form className="daemon-input" onSubmit={run}><label htmlFor="daemon-command">$</label><input id="daemon-command" value={command} onChange={e => setCommand(e.target.value)} placeholder="ask me or type help" autoComplete="off" /><button aria-label="Run command"><Send size={15} /></button></form>
-        <button className="daemon-close-mobile" onClick={() => setOpen(false)}>Close terminal</button>
+        <form className="daemon-input" onSubmit={run}><label htmlFor="daemon-command">Ask</label><input id="daemon-command" value={command} onChange={e => setCommand(e.target.value)} placeholder="What would you like to find?" autoComplete="off" /><button aria-label="Send question"><Send size={15} /></button></form>
+        <button className="daemon-close-mobile" onClick={() => setOpen(false)}>Close guide</button>
       </div>
     </div>
   </aside>;
@@ -433,7 +340,7 @@ function CookieConsent() {
   if (mode === "hidden") return null;
   return <div className="cookie-backdrop"><div ref={dialog} className="cookie-panel" role="dialog" aria-modal="true" aria-labelledby="cookie-title" aria-describedby="cookie-copy">
     <div className="cookie-icon"><Cookie size={22} /></div>
-    <div className="cookie-copy"><strong id="cookie-title">{mode === "manage" ? "Choose what runs" : "Your privacy, centred."}</strong>{mode === "main" ? <p id="cookie-copy">Necessary storage remembers your theme and privacy choice. Optional analytics and marketing stay off until you choose them. Nothing creepy.</p> : <div className="cookie-options"><label><span>Necessary <small>Theme, security and consent memory</small></span><input type="checkbox" checked disabled /></label><label><span>Analytics <small>Anonymous site usage, when configured</small></span><input type="checkbox" checked={analytics} onChange={e => setAnalytics(e.target.checked)} /></label><label><span>Marketing <small>Off by default; no advertising trackers installed</small></span><input type="checkbox" checked={marketing} onChange={e => setMarketing(e.target.checked)} /></label></div>}</div>
+    <div className="cookie-copy"><strong id="cookie-title">{mode === "manage" ? "Choose what runs" : "Your privacy, centred."}</strong>{mode === "main" ? <p id="cookie-copy">Necessary storage remembers your theme and privacy choice. Optional analytics and marketing stay off until you choose them. Nothing creepy.</p> : <div className="cookie-options"><label><span>Necessary <small>Theme, security and consent memory</small></span><input type="checkbox" checked disabled /></label><label><span>Analytics <small>Anonymous site usage, only with your permission</small></span><input type="checkbox" checked={analytics} onChange={e => setAnalytics(e.target.checked)} /></label><label><span>Marketing <small>Off by default; no advertising trackers installed</small></span><input type="checkbox" checked={marketing} onChange={e => setMarketing(e.target.checked)} /></label></div>}</div>
     <div className="cookie-actions">{mode === "main" ? <><button className="button button-primary" onClick={() => choose(true, true)}>Accept all</button><button className="button button-ghost" onClick={() => choose(false, false)}>Reject optional</button><button className="text-button" onClick={() => setMode("manage")}>Manage preferences</button></> : <><button className="button button-primary" onClick={() => choose(analytics, marketing)}><Check size={16} /> Save choices</button><button className="button button-ghost" onClick={() => choose(false, false)}>Reject optional</button></>}</div>
     <Link className="cookie-policy-link" to="/cookies">Read the cookie policy</Link>
   </div></div>;

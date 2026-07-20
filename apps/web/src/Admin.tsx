@@ -14,7 +14,7 @@ type SpecialModule = "integrations" | "automation";
 type Module = "overview" | DataModule | SpecialModule;
 type Row = Record<string, unknown>;
 type AdminRequest = (url: string, init?: RequestInit) => Promise<Record<string, any>>;
-type FieldType = "text" | "email" | "url" | "textarea" | "number" | "select" | "toggle" | "tags" | "keyvalue" | "datetime" | "richtext" | "media" | "readonly" | "setting-value" | "page-content";
+type FieldType = "text" | "email" | "url" | "textarea" | "number" | "select" | "toggle" | "tags" | "keyvalue" | "datetime" | "richtext" | "media" | "media-list" | "readonly" | "setting-value" | "page-content";
 type Field = {
   key: string; label: string; type: FieldType; group: string; help?: string; placeholder?: string; required?: boolean;
   options?: Array<{ label: string; value: string }>; rows?: number; min?: number; max?: number; accept?: string;
@@ -36,11 +36,11 @@ const modules: Array<{ key: Module; label: string; copy: string; icon: typeof La
   { key: "testimonials", label: "Testimonials", copy: "Client feedback and ordering", icon: MessageSquareQuote },
   { key: "pricing", label: "Pricing", copy: "Packages, features and priority", icon: CircleDollarSign },
   { key: "leads", label: "Leads", copy: "Enquiries and sales status", icon: Users },
-  { key: "posts", label: "Articles", copy: "Build log drafts and publishing", icon: BookOpen },
+  { key: "posts", label: "Articles", copy: "Article drafts and publishing", icon: BookOpen },
   { key: "automation", label: "Autoblog", copy: "Research, cadence and originality", icon: Bot },
   { key: "integrations", label: "Notifications", copy: "Free Gmail alerts and Outlook replies", icon: Cable },
-  { key: "commands", label: "DAEMON", copy: "Terminal commands and actions", icon: Command },
-  { key: "settings", label: "Settings", copy: "Public business details", icon: Settings2 },
+  { key: "commands", label: "Site guide", copy: "Visitor questions and plain-language replies", icon: Command },
+  { key: "settings", label: "Settings", copy: "Business details and site features", icon: Settings2 },
 ];
 
 const templates: Record<DataModule, Row> = {
@@ -50,7 +50,7 @@ const templates: Record<DataModule, Row> = {
   pricing: { name: "", price_gbp: 0, description: "", features: "[]", is_popular: 0, sort_order: 0 },
   leads: { status: "new" },
   commands: { command: "", response_text: "", action_type: "text", action_target: "", is_active: 1 },
-  posts: { slug: "", title: "", excerpt: "", seo_title: "", meta_description: "", focus_keyword: "", source_urls: "[]", body: "", status: "draft", published_at: null },
+  posts: { slug: "", title: "", excerpt: "", seo_title: "", meta_description: "", cover_image: "", focus_keyword: "", source_urls: "[]", body: "", status: "draft", published_at: null },
   settings: { key: "contact_email", value: "" },
 };
 
@@ -74,6 +74,7 @@ const settingDefinitions = [
   { value: "instagram_url", label: "Instagram URL", type: "url" },
   { value: "linkedin_url", label: "LinkedIn URL", type: "url" },
   { value: "accepting_projects", label: "Accepting new projects", type: "toggle" },
+  { value: "visitor_guide_enabled", label: "Show visitor site guide", type: "toggle" },
 ] as const;
 
 const fields: Record<DataModule, Field[]> = {
@@ -96,7 +97,7 @@ const fields: Record<DataModule, Field[]> = {
     { key: "result_metrics", label: "Result metrics", type: "keyvalue", group: "Case study", help: "Add a label and value for each measurable outcome." },
     { key: "stack", label: "Technology stack", type: "tags", group: "Technology", placeholder: "Type a technology and press Enter" },
     { key: "image", label: "Primary project image", type: "media", group: "Media", accept: "image/jpeg,image/png,image/webp,image/avif" },
-    { key: "screenshot_r2_keys", label: "Gallery images", type: "tags", group: "Media", help: "Add existing R2 keys or media URLs. Primary-image uploads are handled above." },
+    { key: "screenshot_r2_keys", label: "Project gallery", type: "media-list", group: "Media", accept: "image/jpeg,image/png,image/webp,image/avif", help: "Upload and arrange additional screenshots shown in the case study." },
     { key: "live_url", label: "Live project URL", type: "url", group: "Links and visibility", placeholder: "https://…" },
     { key: "demo_flag", label: "This is a mockup", type: "toggle", group: "Links and visibility", help: "Clearly labels non-production work on the public site." },
     { key: "demo_note", label: "Mockup note", type: "text", group: "Links and visibility" },
@@ -129,8 +130,8 @@ const fields: Record<DataModule, Field[]> = {
     { key: "status", label: "Sales status", type: "select", group: "Workflow", options: statusOptions, required: true },
   ],
   commands: [
-    { key: "command", label: "Command", type: "text", group: "Command", required: true, placeholder: "e.g. availability" },
-    { key: "response_text", label: "Terminal response", type: "textarea", group: "Command", required: true, rows: 5 },
+    { key: "command", label: "Question or phrase", type: "text", group: "Visitor guidance", required: true, placeholder: "e.g. availability" },
+    { key: "response_text", label: "Plain-language reply", type: "textarea", group: "Visitor guidance", required: true, rows: 5, help: "Write for visitors and avoid implementation, database or publishing-status language." },
     { key: "action_type", label: "Action", type: "select", group: "Behaviour", options: actionOptions },
     { key: "action_target", label: "Action target", type: "text", group: "Behaviour", help: "A route, URL or theme name depending on the selected action." },
     { key: "is_active", label: "Command is active", type: "toggle", group: "Publishing" },
@@ -138,18 +139,19 @@ const fields: Record<DataModule, Field[]> = {
   posts: [
     { key: "title", label: "Article title", type: "text", group: "Article details", required: true },
     { key: "slug", label: "URL slug", type: "text", group: "Article details", required: true, help: "Lowercase letters, numbers and hyphens only." },
-    { key: "excerpt", label: "Summary", type: "textarea", group: "Article details", rows: 3, help: "Used on the build-log listing and in search previews." },
+    { key: "excerpt", label: "Summary", type: "textarea", group: "Article details", rows: 3, help: "Used on the article listing and in search previews." },
     { key: "seo_title", label: "SEO title", type: "text", group: "Search appearance", help: "Optional. Aim for 50–60 characters; the article title is the fallback." },
     { key: "meta_description", label: "Meta description", type: "textarea", group: "Search appearance", rows: 2, help: "Optional. Aim for a useful 140–160 character summary." },
     { key: "focus_keyword", label: "Focus phrase", type: "text", group: "Search appearance", help: "A planning aid, never an instruction to stuff keywords." },
     { key: "source_urls", label: "Research sources", type: "tags", group: "Search appearance", placeholder: "Add a source URL and press Enter" },
+    { key: "cover_image", label: "Article cover image", type: "media", group: "Media", accept: "image/jpeg,image/png,image/webp,image/avif", help: "Shown on article cards and above the article heading." },
     { key: "body", label: "Article content", type: "richtext", group: "Content", required: true },
     { key: "status", label: "Publishing status", type: "select", group: "Publishing", options: postStatusOptions },
     { key: "published_at", label: "Publish date and time", type: "datetime", group: "Publishing", help: "Automatically set when publishing if left empty." },
   ],
   settings: [
-    { key: "key", label: "Setting", type: "select", group: "Public setting", options: settingDefinitions.map(item => ({ value: item.value, label: item.label })), required: true },
-    { key: "value", label: "Value", type: "setting-value", group: "Public setting", required: true },
+    { key: "key", label: "Setting", type: "select", group: "Site setting", options: settingDefinitions.map(item => ({ value: item.value, label: item.label })), required: true },
+    { key: "value", label: "Value", type: "setting-value", group: "Site setting", required: true },
   ],
 };
 
@@ -260,7 +262,7 @@ export default function Admin() {
     if (missing) return `${missing.label} is required.`;
     if ((module === "projects" || module === "posts") && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(asString(value.slug))) return "Use a lowercase URL slug with letters, numbers and single hyphens.";
     if (module === "pages" && !pageDefinitionBySlug[asString(value.slug)]) return "Choose a supported site page.";
-    if (module === "settings" && records.settings.some(row => row.key === value.key && row.id !== value.id)) return "That public setting already exists. Edit the existing setting instead.";
+    if (module === "settings" && records.settings.some(row => row.key === value.key && row.id !== value.id)) return "That site setting already exists. Edit the existing setting instead.";
     return "";
   };
 
@@ -280,19 +282,26 @@ export default function Admin() {
     finally { setBusy(false); }
   };
 
-  const uploadMedia = async (event: ChangeEvent<HTMLInputElement>, field: string) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  const uploadMediaFile = async (file: File) => {
     setBusy(true); setNotice(null);
     try {
       const form = new FormData(); form.set("file", file);
       const response = await fetch("/api/admin/media", { method: "POST", headers: { "x-csrf-token": csrf }, body: form });
       const body = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(body.error || "Upload failed.");
-      updateField(field, body.url);
       setNotice({ text: "Upload complete. Save the record to publish it.", kind: "success" });
+      return asString(body.url);
     } catch (uploadError) { setNotice({ text: uploadError instanceof Error ? uploadError.message : "Upload failed.", kind: "error" }); }
-    finally { setBusy(false); event.target.value = ""; }
+    finally { setBusy(false); }
+    return "";
+  };
+
+  const uploadMedia = async (event: ChangeEvent<HTMLInputElement>, field: string) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const url = await uploadMediaFile(file);
+    if (url) updateField(field, url);
+    event.target.value = "";
   };
 
   const duplicate = (row: Row) => {
@@ -348,7 +357,7 @@ export default function Admin() {
       <main className="admin-workspace">
         <div className="admin-toolbar"><div>{editing && <button className="admin-back" onClick={() => navigateModule(module)}><ArrowLeft size={15} /> Back to {current.label.toLowerCase()}</button>}<span className="kicker">{editing ? `${editing.id ? "Edit" : "Create"} ${singular(module)}` : current.label}</span><h2>{editing ? recordTitle(editing) || `New ${singular(module)}` : module === "overview" ? "Workspace overview" : module === "automation" ? "Scheduled editorial engine" : module === "integrations" ? "Connected services" : `${rows.length} record${rows.length === 1 ? "" : "s"}`}</h2>{!editing && <p>{current.copy}</p>}</div>{!editing && <div>{module === "leads" && <button className="button button-ghost" onClick={exportLeads}><Download size={16} /> Export CSV</button>}<button className="button button-ghost" onClick={() => load(module)} disabled={busy}><RefreshCw className={busy ? "spin" : ""} size={16} /> Refresh</button>{dataModules.includes(module as DataModule) && module !== "leads" && module !== "pages" && <button className="button button-primary" onClick={() => openEditor()}><Plus size={16} /> Add {singular(module)}</button>}</div>}</div>
         {notice && <div className={`admin-notice ${notice.kind}`} role={notice.kind === "error" ? "alert" : "status"}>{notice.kind === "success" ? <CheckCircle2 size={18} /> : <X size={18} />}<span>{notice.text}</span><button onClick={() => setNotice(null)} aria-label="Dismiss message"><X size={15} /></button></div>}
-        {module === "overview" ? <OverviewPanel data={overview} onOpen={navigateModule} /> : module === "integrations" ? <NotificationPanel data={notifications} /> : module === "automation" ? <AutoblogPanel data={autoblog} setData={setAutoblog} request={request} onReload={() => load("automation", true)} setNotice={setNotice} /> : editing ? <RecordEditor module={module as DataModule} record={editing} busy={busy} onChange={updateField} onUpload={uploadMedia} onSave={save} onCancel={() => navigateModule(module)} /> : <>
+        {module === "overview" ? <OverviewPanel data={overview} onOpen={navigateModule} /> : module === "integrations" ? <NotificationPanel data={notifications} /> : module === "automation" ? <AutoblogPanel data={autoblog} setData={setAutoblog} request={request} onReload={() => load("automation", true)} setNotice={setNotice} /> : editing ? <RecordEditor module={module as DataModule} record={editing} busy={busy} onChange={updateField} onUpload={uploadMedia} onFileUpload={uploadMediaFile} onSave={save} onCancel={() => navigateModule(module)} /> : <>
           <div className="admin-list-tools"><label><Search size={16} /><input value={query} onChange={event => setQuery(event.target.value)} placeholder={`Search ${current.label.toLowerCase()}…`} aria-label={`Search ${current.label}`} />{query && <button onClick={() => setQuery("")} aria-label="Clear search"><X size={14} /></button>}</label>{filterOptions(module) && <label className="admin-filter"><SlidersHorizontal size={15} /><select value={filter} onChange={event => setFilter(event.target.value)} aria-label="Filter records">{filterOptions(module)!.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>}</div>
           <RecordList module={module as DataModule} rows={filteredRows} loading={busy && rows.length === 0} query={query} onEdit={openEditor} onDuplicate={duplicate} onDelete={remove} />
         </>}
@@ -362,7 +371,7 @@ function OverviewPanel({ data, onOpen }: { data: Overview; onOpen: (module: Modu
     { label: "New leads", value: data.newLeads, copy: "Waiting for a first response", icon: Users, target: "leads" as Module },
     { label: "Published articles", value: data.publishedPosts, copy: `${data.draftPosts} draft${data.draftPosts === 1 ? "" : "s"} in progress`, icon: BookOpen, target: "posts" as Module },
     { label: "Projects", value: data.counts.projects || 0, copy: "Case studies in the portfolio", icon: BriefcaseBusiness, target: "projects" as Module },
-    { label: "Active commands", value: data.counts.commands || 0, copy: "Custom DAEMON responses", icon: Command, target: "commands" as Module },
+    { label: "Guide answers", value: data.counts.commands || 0, copy: "Active visitor questions and replies", icon: Command, target: "commands" as Module },
   ];
   return <div className="admin-overview"><div className="admin-stat-grid">{cards.map(card => { const CardIcon = card.icon; return <button key={card.label} onClick={() => onOpen(card.target)}><span><CardIcon size={18} />{card.label}</span><strong>{card.value}</strong><small>{card.copy}</small><ChevronRight size={17} /></button>; })}</div>
     <section className="admin-panel"><div className="admin-panel-head"><div><span className="kicker">Pipeline</span><h3>Recent enquiries</h3></div><button onClick={() => onOpen("leads")}>View all <ArrowRight size={15} /></button></div>{data.recentLeads.length ? <div className="admin-recent-leads">{data.recentLeads.map(lead => <button key={asString(lead.id)} onClick={() => onOpen("leads")}><span className="lead-avatar">{asString(lead.name).slice(0, 1).toUpperCase()}</span><span><strong>{asString(lead.name)}</strong><small>{asString(lead.project_type) || "General enquiry"} · {formatDate(lead.created_at)}</small></span><StatusBadge value={asString(lead.status)} /></button>)}</div> : <div className="admin-empty-compact"><Mail /><span><strong>No enquiries yet</strong><small>New contact-form submissions will appear here.</small></span></div>}</section>
@@ -380,11 +389,11 @@ function RecordList({ module, rows, loading, query, onEdit, onDuplicate, onDelet
   </article>)}</div>;
 }
 
-function RecordEditor({ module, record, busy, onChange, onUpload, onSave, onCancel }: { module: DataModule; record: Row; busy: boolean; onChange: (key: string, value: unknown) => void; onUpload: (event: ChangeEvent<HTMLInputElement>, field: string) => void; onSave: () => void; onCancel: () => void }) {
+function RecordEditor({ module, record, busy, onChange, onUpload, onFileUpload, onSave, onCancel }: { module: DataModule; record: Row; busy: boolean; onChange: (key: string, value: unknown) => void; onUpload: (event: ChangeEvent<HTMLInputElement>, field: string) => void; onFileUpload: (file: File) => Promise<string>; onSave: () => void; onCancel: () => void }) {
   const groups = [...new Set(fields[module].map(field => field.group))];
   const replyHref = `mailto:${encodeURIComponent(asString(record.email))}?subject=${encodeURIComponent("Re: Your Build With Duke enquiry")}&body=${encodeURIComponent(`Hi ${asString(record.name).split(" ")[0]},\n\nThanks for getting in touch.\n\n— Duke\nBuild With Duke`)}`;
   return <div className="admin-form">{module === "leads" && <div className="lead-contact-actions"><a className="button button-primary" href={replyHref} title="Opens your default mail app; set Outlook as the default to reply from the business account."><Mail size={16} /> Draft reply in Outlook</a>{asString(record.email) && <button className="button button-ghost" onClick={() => navigator.clipboard.writeText(asString(record.email))}><Copy size={15} /> Copy email</button>}</div>}
-    {groups.map(group => <section className={`admin-form-section ${group === "Content" ? "wide" : ""}`} key={group}><div className="admin-form-section-head"><h3>{group}</h3><span>{sectionHelp(module, group)}</span></div><div className="admin-fields">{fields[module].filter(field => field.group === group).map(field => <AdminField key={field.key} field={field} value={record[field.key]} record={record} busy={busy} onChange={value => onChange(field.key, value)} onUpload={event => onUpload(event, field.key)} />)}</div></section>)}
+    {groups.map(group => <section className={`admin-form-section ${group === "Content" ? "wide" : ""}`} key={group}><div className="admin-form-section-head"><h3>{group}</h3><span>{sectionHelp(module, group)}</span></div><div className="admin-fields">{fields[module].filter(field => field.group === group).map(field => <AdminField key={field.key} field={field} value={record[field.key]} record={record} busy={busy} onChange={value => onChange(field.key, value)} onUpload={event => onUpload(event, field.key)} onFileUpload={onFileUpload} />)}</div></section>)}
     <div className="admin-savebar"><div>{record.id ? <><Check size={17} /><span>Editing an existing {singular(module)}</span></> : <><Plus size={17} /><span>Creating a new {singular(module)}</span></>}</div><div><button className="button button-ghost" onClick={onCancel} disabled={busy}>Cancel</button><button className="button button-primary" onClick={onSave} disabled={busy}><Save size={16} /> {busy ? "Saving…" : module === "leads" ? "Update status" : "Save record"}</button></div></div>
   </div>;
 }
@@ -464,14 +473,15 @@ function ModelPicker({ value, onChange, request, disabled }: { value: string; on
   return <div className="model-picker" ref={root}><button type="button" className="model-picker-trigger" onClick={() => setOpen(current => !current)} disabled={disabled} aria-haspopup="listbox" aria-expanded={open}><span><strong>{selected?.name || value || "Choose a model"}</strong><small>{selected ? `${selected.provider} · ${selected.isFree ? "Free" : "Paid"} · ${selected.contextLength.toLocaleString()} context` : value}</small></span><ChevronDown size={17} /></button>{open && <div className="model-picker-menu"><div className="model-picker-search"><Search size={15} /><input autoFocus value={query} onChange={event => setQuery(event.target.value)} placeholder="Search name, ID or description…" aria-label="Search OpenRouter models" /></div><div className="model-picker-filters"><select value={provider} onChange={event => setProvider(event.target.value)} aria-label="Filter model provider"><option value="all">All providers</option>{providers.map(item => <option key={item} value={item}>{item}</option>)}</select><select value={cost} onChange={event => setCost(event.target.value)} aria-label="Filter model price"><option value="all">Free and paid</option><option value="free">Free only</option><option value="paid">Paid only</option></select><select value={capability} onChange={event => setCapability(event.target.value)} aria-label="Filter model capability"><option value="all">All capabilities</option><option value="tools">Tool calling</option><option value="image">Image input</option></select></div><div className="model-picker-results" role="listbox" aria-label="OpenRouter models">{loading ? <span className="model-picker-state"><RefreshCw className="spin" /> Loading current models…</span> : error ? <span className="model-picker-state error"><AlertTriangle /> {error}</span> : shown.length ? shown.slice(0, 150).map(model => <button type="button" role="option" aria-selected={model.id === value} key={model.id} onClick={() => { onChange(model.id); setOpen(false); }}><span><strong>{model.name}</strong><code>{model.id}</code></span><span><em>{model.isFree ? "Free" : "Paid"}</em><small>{model.contextLength.toLocaleString()} ctx{model.supportsTools ? " · tools" : ""}</small></span></button>) : <span className="model-picker-state">No models match these filters.</span>}</div></div>}</div>;
 }
 
-function AdminField({ field, value, record, busy, onChange, onUpload }: { field: Field; value: unknown; record: Row; busy: boolean; onChange: (value: unknown) => void; onUpload: (event: ChangeEvent<HTMLInputElement>) => void }) {
+function AdminField({ field, value, record, busy, onChange, onUpload, onFileUpload }: { field: Field; value: unknown; record: Row; busy: boolean; onChange: (value: unknown) => void; onUpload: (event: ChangeEvent<HTMLInputElement>) => void; onFileUpload: (file: File) => Promise<string> }) {
   const inputId = `admin-${field.key}`;
-  if (field.type === "page-content") return <PageContentEditor slug={asString(record.slug)} value={value} disabled={busy} onChange={next => onChange(JSON.stringify(next))} />;
+  if (field.type === "page-content") return <PageContentEditor slug={asString(record.slug)} value={value} disabled={busy} onChange={next => onChange(JSON.stringify(next))} onFileUpload={onFileUpload} />;
   if (field.type === "toggle") return <label className="admin-toggle" htmlFor={inputId}><span><strong>{field.label}</strong>{field.help && <small>{field.help}</small>}</span><input id={inputId} type="checkbox" checked={asBoolean(value)} onChange={event => onChange(event.target.checked ? 1 : 0)} disabled={busy} /><i aria-hidden="true"><span /></i></label>;
   if (field.type === "tags") return <FieldShell field={field}><StringListField value={value} placeholder={field.placeholder} onChange={items => onChange(JSON.stringify(items))} /></FieldShell>;
   if (field.type === "keyvalue") return <FieldShell field={field}><KeyValueField value={value} onChange={entries => onChange(JSON.stringify(entries))} /></FieldShell>;
   if (field.type === "richtext") return <FieldShell field={field} wide><AdminRichTextEditor value={asString(value)} onChange={onChange} placeholder="Write the full article here…" disabled={busy} /></FieldShell>;
   if (field.type === "media") return <FieldShell field={field} wide><MediaField value={asString(value)} accept={field.accept} busy={busy} onChange={onChange} onUpload={onUpload} /></FieldShell>;
+  if (field.type === "media-list") return <FieldShell field={field} wide><MediaListField value={value} accept={field.accept} busy={busy} onChange={items => onChange(JSON.stringify(items))} onFileUpload={onFileUpload} /></FieldShell>;
   if (field.type === "setting-value") return <FieldShell field={field}><SettingValueField settingKey={asString(record.key)} value={asString(value)} onChange={onChange} /></FieldShell>;
   if (field.type === "readonly") return <FieldShell field={field}><div className={`admin-readonly ${field.key === "message" ? "message" : ""}`}>{field.key === "created_at" ? formatDate(value, true) : asString(value) || "—"}</div></FieldShell>;
   if (field.type === "textarea") return <FieldShell field={field}><textarea id={inputId} rows={field.rows || 4} value={asString(value)} placeholder={field.placeholder} required={field.required} onChange={event => onChange(event.target.value)} disabled={busy} /></FieldShell>;
@@ -480,18 +490,57 @@ function AdminField({ field, value, record, busy, onChange, onUpload }: { field:
   return <FieldShell field={field}><input id={inputId} type={field.type === "number" ? "number" : field.type} value={value == null ? "" : asString(value)} min={field.min} max={field.max} placeholder={field.placeholder} required={field.required} onChange={event => onChange(field.type === "number" ? (event.target.value === "" ? null : Number(event.target.value)) : event.target.value)} disabled={busy} /></FieldShell>;
 }
 
-function PageContentEditor({ slug, value, disabled, onChange }: { slug: string; value: unknown; disabled: boolean; onChange: (value: Record<string, string | string[]>) => void }) {
+function PageContentEditor({ slug, value, disabled, onChange, onFileUpload }: { slug: string; value: unknown; disabled: boolean; onChange: (value: Record<string, string | string[]>) => void; onFileUpload: (file: File) => Promise<string> }) {
   const definition = pageDefinitionBySlug[slug];
   if (!definition) return <div className="admin-inline-warning"><AlertTriangle size={16} /><span>This route does not have a page-copy definition.</span></div>;
   const content = { ...definition.content, ...parsePageContent(value) };
   const groups = [...new Set(Object.keys(content).map(pageFieldGroup))];
   const update = (key: string, next: string | string[]) => onChange({ ...content, [key]: next });
-  return <div className="page-content-editor">{groups.map(group => <section key={group}><h4>{group}</h4><div>{Object.entries(content).filter(([key]) => pageFieldGroup(key) === group).map(([key, entry]) => {
+  const updateLists = (changes: Record<string, string[]>) => onChange({ ...content, ...changes });
+  const renderField = (key: string, entry: string | string[]) => {
     const label = pageFieldLabel(key);
     if (Array.isArray(entry)) return <label className="admin-field" key={key}><span>{label}</span><StringListField value={entry} inputLabel={label} placeholder={`Add ${label.toLowerCase().replace(/s$/, "")}`} onChange={items => update(key, items)} /></label>;
+    if (key.endsWith("_image") || key === "cv_file") {
+      const accept = key === "cv_file" ? "application/pdf" : "image/jpeg,image/png,image/webp,image/avif";
+      return <label className="admin-field wide" key={key}><span>{label}</span><MediaField value={entry} accept={accept} busy={disabled} onChange={next => update(key, next)} onUpload={async event => { const file = event.target.files?.[0]; if (file) { const url = await onFileUpload(file); if (url) update(key, url); } event.target.value = ""; }} /></label>;
+    }
     const multiline = entry.length > 90 || /(copy|intro|paragraph|description|placeholder|message|quote)$/.test(key);
     return <label className="admin-field" key={key} htmlFor={`page-${slug}-${key}`}><span>{label}</span>{multiline ? <textarea id={`page-${slug}-${key}`} rows={entry.length > 220 ? 5 : 3} value={entry} onChange={event => update(key, event.target.value)} disabled={disabled} /> : <input id={`page-${slug}-${key}`} value={entry} onChange={event => update(key, event.target.value)} disabled={disabled} />}</label>;
-  })}</div></section>)}</div>;
+  };
+  if (slug === "cv") return <div className="page-content-editor cv-builder">
+    <div className="page-editor-map"><strong>CV builder</strong><span>Introduction</span><span>Sidebar</span><span>Profile</span><span>Outcomes</span><span>Experience</span><span>Selected work</span><span>Capabilities</span><span>Education</span><span>Certifications</span></div>
+    <section><h4>CV introduction</h4><p>Sets the title and short introduction at the top of the public CV.</p><div>{["hero_title", "hero_intro"].map(key => renderField(key, content[key]))}</div></section>
+    <section className="cv-builder-sidebar"><h4>CV sidebar</h4><p>Portrait, role summary, location and downloadable CV.</p><div>{["portrait_image", "sidebar_roles", "sidebar_location", "cv_file"].map(key => renderField(key, content[key]))}</div></section>
+    <section><h4>Profile</h4><div>{renderField("profile_copy", content.profile_copy)}</div></section>
+    <section><h4>Selected outcomes</h4><div>{renderField("outcome_items", content.outcome_items)}</div></section>
+    <section><h4>Experience</h4><ParallelListEditor labels={["Role", "What you did", "Employer and dates"]} listKeys={["experience_titles", "experience_details", "experience_meta"]} content={content} onChange={updateLists} /></section>
+    <section><h4>Selected work</h4><ParallelListEditor labels={["Project", "Summary", "Skills and tools"]} listKeys={["technical_titles", "technical_details", "technical_meta"]} content={content} onChange={updateLists} /></section>
+    <section><h4>Core capabilities</h4><div>{renderField("capabilities", content.capabilities)}</div></section>
+    <section><h4>Education and recognition</h4><ParallelListEditor labels={["Achievement", "Institution and date"]} listKeys={["education_titles", "education_meta"]} content={content} onChange={updateLists} /></section>
+    <section><h4>Certifications</h4><ParallelListEditor labels={["Certification", "Provider and date"]} listKeys={["certification_titles", "certification_meta"]} content={content} onChange={updateLists} /></section>
+  </div>;
+  const pairedGroups: Record<string, { labels: string[]; keys: string[] }> = slug === "pricing" ? { "Frequently asked questions": { labels: ["Question", "Answer"], keys: ["faq_questions", "faq_answers"] } } : slug === "about" ? { Credentials: { labels: ["Credential", "Detail"], keys: ["credential_titles", "credential_details"] } } : ["privacy", "cookies", "terms"].includes(slug) ? { Section: { labels: ["Section heading", "Section copy"], keys: ["section_titles", "section_copies"] } } : {};
+  return <div className="page-content-editor"><div className="page-editor-map"><strong>{definition.name} page</strong>{groups.map(group => <span key={group}>{group}</span>)}</div>{groups.map(group => <section key={group}><h4>{group}</h4><p>{pageSectionDescription(slug, group)}</p>{pairedGroups[group] ? <ParallelListEditor labels={pairedGroups[group].labels} listKeys={pairedGroups[group].keys} content={content} onChange={updateLists} /> : <div>{Object.entries(content).filter(([key]) => pageFieldGroup(key) === group).map(([key, entry]) => renderField(key, entry))}</div>}</section>)}</div>;
+}
+
+function ParallelListEditor({ labels, listKeys, content, onChange }: { labels: string[]; listKeys: string[]; content: Record<string, string | string[]>; onChange: (changes: Record<string, string[]>) => void }) {
+  const lists = listKeys.map(key => Array.isArray(content[key]) ? content[key] as string[] : []);
+  const length = Math.max(0, ...lists.map(list => list.length));
+  const update = (listIndex: number, rowIndex: number, next: string) => {
+    const list = [...lists[listIndex]]; while (list.length <= rowIndex) list.push(""); list[rowIndex] = next; onChange({ [listKeys[listIndex]]: list });
+  };
+  const remove = (rowIndex: number) => onChange(Object.fromEntries(listKeys.map((key, index) => [key, lists[index].filter((_, itemIndex) => itemIndex !== rowIndex)])));
+  const add = () => onChange(Object.fromEntries(listKeys.map((key, index) => [key, [...lists[index], ""]])));
+  return <div className="parallel-list-editor">{Array.from({ length }, (_, rowIndex) => <article key={rowIndex}><header><strong>Entry {rowIndex + 1}</strong><button type="button" onClick={() => remove(rowIndex)} aria-label={`Remove entry ${rowIndex + 1}`}><Trash2 size={14} /> Remove</button></header><div>{labels.map((label, listIndex) => <label className="admin-field" key={label}><span>{label}</span>{listIndex === 1 && labels.length === 3 ? <textarea rows={4} value={lists[listIndex][rowIndex] || ""} onChange={event => update(listIndex, rowIndex, event.target.value)} /> : <input value={lists[listIndex][rowIndex] || ""} onChange={event => update(listIndex, rowIndex, event.target.value)} />}</label>)}</div></article>)}<button type="button" className="button button-ghost" onClick={add}><Plus size={15} /> Add entry</button></div>;
+}
+
+function pageSectionDescription(slug: string, group: string) {
+  if (group === "Page introduction") return "The heading and introduction visitors see first.";
+  if (group.startsWith("Service ")) return "One service card, ordered as it appears on the page.";
+  if (group === "Credentials") return "Credentials displayed together in the proof section.";
+  if (["privacy", "cookies", "terms"].includes(slug) && group === "Section") return "Keep each heading paired with the policy text shown beneath it.";
+  if (group === "Shared content") return "Reusable calls to action, footer text and missing-page messages.";
+  return "This section follows the order of the public page.";
 }
 
 function FieldShell({ field, children, wide = false }: { field: Field; children: ReactNode; wide?: boolean }) {
@@ -515,7 +564,21 @@ function KeyValueField({ value, onChange }: { value: unknown; onChange: (entries
 }
 
 function MediaField({ value, accept, busy, onChange, onUpload }: { value: string; accept?: string; busy: boolean; onChange: (value: string) => void; onUpload: (event: ChangeEvent<HTMLInputElement>) => void }) {
-  return <div className="admin-media-field">{value ? <div className="admin-media-preview"><img src={value} alt="Current project media" /><button type="button" onClick={() => onChange("")}><Trash2 size={15} /> Remove</button></div> : <div className="admin-media-placeholder"><ImageIcon /><span>No project image selected</span></div>}<div className="admin-media-controls"><label className="button button-ghost"><Upload size={16} /> {busy ? "Uploading…" : "Upload image"}<input type="file" accept={accept} onChange={onUpload} disabled={busy} /></label><span>or</span><input aria-label="Media URL" type="url" value={value} placeholder="Paste an image URL" onChange={event => onChange(event.target.value)} /></div><small>JPG, PNG, WebP or AVIF · 8 MB maximum. Uploaded files are stored in R2.</small></div>;
+  const document = accept === "application/pdf" || value.toLowerCase().endsWith(".pdf");
+  return <div className="admin-media-field">{value ? <div className={`admin-media-preview ${document ? "document" : ""}`}>{document ? <span><FileText /><strong>CV document selected</strong><a href={value} target="_blank" rel="noreferrer">Preview document <ExternalLink size={14} /></a></span> : <img src={value} alt="Current uploaded media" />}<button type="button" onClick={() => onChange("")}><Trash2 size={15} /> Remove</button></div> : <div className="admin-media-placeholder">{document ? <FileText /> : <ImageIcon />}<span>No {document ? "document" : "image"} selected</span></div>}<div className="admin-media-controls"><label className="button button-ghost"><Upload size={16} /> {busy ? "Uploading…" : `Upload ${document ? "PDF" : "image"}`}<input type="file" accept={accept} onChange={onUpload} disabled={busy} /></label><span>or</span><input aria-label="Media URL" type="url" value={value} placeholder={`Paste ${document ? "a PDF" : "an image"} URL`} onChange={event => onChange(event.target.value)} /></div><small>{document ? "PDF" : "JPG, PNG, WebP or AVIF"} · 8 MB maximum. Uploaded files are stored in the site media library.</small></div>;
+}
+
+function MediaListField({ value, accept, busy, onChange, onFileUpload }: { value: unknown; accept?: string; busy: boolean; onChange: (items: string[]) => void; onFileUpload: (file: File) => Promise<string> }) {
+  const items = parseList(value);
+  const upload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    const uploaded: string[] = [];
+    for (const file of files) { const url = await onFileUpload(file); if (url) uploaded.push(url); }
+    if (uploaded.length) onChange([...items, ...uploaded]);
+    event.target.value = "";
+  };
+  const move = (index: number, direction: -1 | 1) => { const target = index + direction; if (target < 0 || target >= items.length) return; const next = [...items]; [next[index], next[target]] = [next[target], next[index]]; onChange(next); };
+  return <div className="admin-media-list">{items.length ? <div>{items.map((item, index) => <article key={`${item}-${index}`}><img src={item} alt={`Gallery image ${index + 1}`} /><span>Image {index + 1}</span><div><button type="button" onClick={() => move(index, -1)} disabled={index === 0} aria-label={`Move image ${index + 1} earlier`}>↑</button><button type="button" onClick={() => move(index, 1)} disabled={index === items.length - 1} aria-label={`Move image ${index + 1} later`}>↓</button><button type="button" onClick={() => onChange(items.filter((_, itemIndex) => itemIndex !== index))} aria-label={`Remove image ${index + 1}`}><Trash2 size={14} /></button></div></article>)}</div> : <div className="admin-media-placeholder"><ImageIcon /><span>No gallery images yet</span></div>}<label className="button button-ghost"><Upload size={16} /> {busy ? "Uploading…" : "Upload gallery images"}<input type="file" accept={accept} multiple onChange={upload} disabled={busy} /></label><small>Select more than one image to upload a gallery in one go. Use the arrows to set the display order.</small></div>;
 }
 
 function SettingValueField({ settingKey, value, onChange }: { settingKey: string; value: string; onChange: (value: unknown) => void }) {
@@ -556,5 +619,5 @@ function formatDate(value: unknown, includeTime = false) { const date = new Date
 function toDateTimeLocal(value: unknown) { const date = new Date(asString(value)); if (Number.isNaN(date.getTime())) return ""; const offset = date.getTimezoneOffset(); return new Date(date.getTime() - offset * 60_000).toISOString().slice(0, 16); }
 function sectionHelp(module: DataModule, group: string) {
   const key = `${module}:${group}`;
-  return ({ "pages:Route": "The fixed public route this content belongs to.", "pages:Search appearance": "Control the title and description used by browsers and search engines.", "pages:Page content": "Edit the labelled content fields used by this route. List items stay structured and easy to add or remove.", "projects:Essentials": "How this project is identified and grouped.", "projects:Case study": "Tell a clear problem-to-outcome story.", "projects:Media": "Choose imagery used across project pages.", "posts:Content": "Format the article exactly as readers will see it.", "posts:Publishing": "Keep it private or schedule its public date.", "leads:Workflow": "Move the enquiry through your sales pipeline.", "settings:Public setting": "Only approved public business details are available here." } as Record<string, string>)[key] || "Complete the fields below.";
+  return ({ "pages:Route": "The fixed public route this content belongs to.", "pages:Search appearance": "Control the title and description used by browsers and search engines.", "pages:Page content": "Edit this page in the same section order visitors see.", "projects:Essentials": "How this project is identified and grouped.", "projects:Case study": "Tell a clear problem-to-outcome story.", "projects:Media": "Upload the main preview and case-study gallery.", "posts:Content": "Format the article exactly as readers will see it.", "posts:Publishing": "Keep it private or schedule its public date.", "leads:Workflow": "Move the enquiry through your sales pipeline.", "settings:Site setting": "Approved business details and visitor-facing feature controls." } as Record<string, string>)[key] || "Complete the fields below.";
 }

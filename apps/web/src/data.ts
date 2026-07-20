@@ -9,6 +9,7 @@ export type Project = {
   stack: string[];
   category: "Web development" | "AI automation" | "Software";
   image: string;
+  gallery?: string[];
   liveUrl: string;
   featured?: boolean;
   demo?: boolean;
@@ -19,9 +20,9 @@ export const projects: Project[] = [
     slug: "eventstreamhd",
     title: "EventStreamHD",
     eyebrow: "Streaming platform · Live",
-    description: "A responsive movie, TV and sports platform with a purpose-built admin system for a large, changing catalogue.",
+    description: "A responsive movie, TV and sports platform designed to keep a large, changing catalogue easy to browse and manage.",
     problem: "A growing media catalogue needed a usable front door and a maintainable way to manage content without editing code.",
-    solution: "I built the React and Vite catalogue experience, search and category flows, custom admin CRUD, and deployed the monorepo on Cloudflare.",
+    solution: "I shaped the catalogue, search and category journeys, then added straightforward management tools so the team can keep everything current.",
     result: "A production platform that keeps a broad media catalogue navigable and maintainable across mobile and desktop.",
     stack: ["React", "Vite", "Radix UI", "Cloudflare"],
     category: "Web development",

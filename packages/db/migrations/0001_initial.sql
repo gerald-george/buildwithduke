@@ -64,6 +64,7 @@ CREATE TABLE blog_posts (
   published_at TEXT,
   seo_title TEXT,
   meta_description TEXT,
+  cover_image TEXT,
   focus_keyword TEXT,
   source_urls TEXT NOT NULL DEFAULT '[]',
   ai_generated INTEGER NOT NULL DEFAULT 0,
@@ -165,7 +166,7 @@ INSERT OR IGNORE INTO page_content (id, slug, name, seo_title, meta_description,
   ('page-about', 'about', 'About', 'About Duke — buildwithduke', 'Full-stack developer, AI automation specialist and systems thinker.', 50),
   ('page-contact', 'contact', 'Contact', 'Start a project — buildwithduke', 'Tell Duke what you need to build, fix or automate.', 60),
   ('page-cv', 'cv', 'CV', 'Duke’s CV — buildwithduke', 'Duke Chijimaka Jonathan’s experience, technical stack, education and selected outcomes.', 70),
-  ('page-blog', 'blog', 'Articles', 'Build log — buildwithduke', 'Practical notes on web systems, AI-assisted development and automation.', 80),
+  ('page-blog', 'blog', 'Articles', 'Articles — buildwithduke', 'Practical notes on web systems, AI-assisted development and automation.', 80),
   ('page-privacy', 'privacy', 'Privacy policy', 'Privacy policy — buildwithduke', 'How buildwithduke handles enquiry and website data.', 90),
   ('page-cookies', 'cookies', 'Cookie policy', 'Cookie policy — buildwithduke', 'Necessary storage and optional consent choices on buildwithduke.', 100),
   ('page-terms', 'terms', 'Website terms', 'Website terms — buildwithduke', 'Terms for using the buildwithduke portfolio website.', 110),
@@ -173,8 +174,11 @@ INSERT OR IGNORE INTO page_content (id, slug, name, seo_title, meta_description,
 
 INSERT OR IGNORE INTO daemon_commands (id, command, response_text, action_type, action_target) VALUES
   ('daemon-cv', 'cv', 'Opening Duke’s full CV, experience and credentials.', 'navigate', '/cv'),
-  ('daemon-blog', 'articles', 'Opening the published build log.', 'navigate', '/blog'),
+  ('daemon-blog', 'articles', 'Opening Duke’s articles.', 'navigate', '/blog'),
   ('daemon-github', 'github', 'Opening Duke’s public GitHub profile.', 'link', 'https://github.com/build-with-duke'),
   ('daemon-whatsapp', 'whatsapp', 'Opening a private WhatsApp conversation.', 'link', 'https://wa.me/2349152151634'),
   ('daemon-privacy', 'privacy', 'Opening the privacy policy.', 'navigate', '/privacy'),
   ('daemon-cookies', 'cookies', 'Opening the cookie policy.', 'navigate', '/cookies');
+
+INSERT OR IGNORE INTO business_settings (id, key, value) VALUES
+  ('setting-visitor-guide', 'visitor_guide_enabled', 'true');
