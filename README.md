@@ -30,15 +30,12 @@ Use `apps/web` as the Cloudflare Pages build root.
 
 Cloudflare Pages does not support a `[build]` section in `wrangler.toml`, so keep the build command and root directory in the Pages dashboard. The app-local `apps/web/wrangler.toml` declares the output path and production bindings. For an explicit CLI deployment from the repository root, run `pnpm deploy:pages`; it builds first and runs Wrangler from `apps/web`. All Pages handlers live under `apps/web/functions`.
 
-The production binding IDs are configured in `apps/web/wrangler.toml`. To provision replacement infrastructure, create it and then apply all schema migrations in order from the repository root:
+The production binding IDs are configured in `apps/web/wrangler.toml`. To provision replacement infrastructure, create it and then apply the fresh database schema from the repository root:
 
 ```bash
 pnpm dlx wrangler d1 create buildwithduke
 pnpm dlx wrangler r2 bucket create buildwithduke-media
 pnpm dlx wrangler d1 execute buildwithduke --remote --file packages/db/migrations/0001_initial.sql
-pnpm dlx wrangler d1 execute buildwithduke --remote --file packages/db/migrations/0002_production_admin.sql
-pnpm dlx wrangler d1 execute buildwithduke --remote --file packages/db/migrations/0003_integrations_autoblogging_seo.sql
-pnpm dlx wrangler d1 execute buildwithduke --remote --file packages/db/migrations/0004_remove_microsoft_credentials.sql
 ```
 
 Configure `TURNSTILE_SECRET_KEY`, `ADMIN_PASSWORD_HASH`, `ADMIN_SESSION_SECRET`, `GOOGLE_APPS_SCRIPT_URL`, and `CONTACT_RELAY_SECRET` as encrypted Pages secrets. Configure `ADMIN_EMAIL`, `VITE_TURNSTILE_SITE_KEY`, and `VITE_PLAUSIBLE_DOMAIN` as build/runtime variables. Production contact requests fail closed when Turnstile or D1 is unavailable; successfully validated enquiries are stored even if the private Gmail notification relay has a transient failure. Bank transfer is the only payment method currently offered; payment details are sent privately with an accepted quote or invoice and are never stored in client-side code.

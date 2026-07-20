@@ -113,6 +113,14 @@ test("home and project index cards share the same media proportions", async ({ p
   expect(index!.width / index!.height).toBeCloseTo(16 / 9, 1);
 });
 
+test("project previews include accessible glitch and static hover layers", async ({ page }) => {
+  await page.goto("/projects");
+  const preview = page.locator(".project-index-card .project-visual").first();
+  await expect(preview.locator("img")).toHaveCount(2);
+  await expect(preview.locator(".project-glitch")).toHaveAttribute("aria-hidden", "true");
+  await expect(preview.locator(".project-static")).toHaveAttribute("aria-hidden", "true");
+});
+
 test("DAEMON can be repositioned with its drag handle", async ({ page, isMobile }) => {
   test.skip(isMobile, "Desktop drag behavior becomes a bottom sheet on mobile.");
   await page.goto("/");
@@ -242,7 +250,7 @@ test("lead records hand replies off to Outlook without a mailbox API", async ({ 
   });
   await page.goto("/admin");
   await page.getByRole("button", { name: /Leads Enquiries/ }).click();
-  await page.getByRole("button", { name: /Ada Lovelace/ }).click();
+  await page.locator(".admin-record-main").filter({ hasText: "Ada Lovelace" }).click();
   const reply = page.getByRole("link", { name: "Draft reply in Outlook" });
   await expect(reply).toHaveAttribute("href", /^mailto:ada%40example\.com\?subject=Re%3A%20Your%20Build%20With%20Duke%20enquiry&body=/);
   await expect(page.getByText("No synced messages")).toHaveCount(0);

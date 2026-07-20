@@ -130,7 +130,7 @@ export function TechTicker() {
 }
 
 export function ProjectVisual({ image, title }: { image: string; title: string }) {
-  return <div className="project-visual"><img src={image} alt={`${title} website preview`} loading="lazy" /><span className="visual-scan" /></div>;
+  return <div className="project-visual"><img src={image} alt={`${title} website preview`} loading="lazy" /><img className="project-glitch" src={image} alt="" loading="lazy" aria-hidden="true" /><span className="project-static" aria-hidden="true" /><span className="visual-scan" aria-hidden="true" /></div>;
 }
 
 export function FAQ({ items }: { items: string[][] }) {

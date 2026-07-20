@@ -55,7 +55,7 @@ export const expiredSessionCookie = "duke_admin_session=; HttpOnly; Secure; Same
 export function adminDatabaseError(error: unknown) {
   const message = error instanceof Error ? error.message : String(error || "");
   if (/no such table|no such column/i.test(message)) {
-    return Response.json({ error: "The production database schema is incomplete. Apply D1 migrations 0001–0004, then refresh the admin workspace." }, { status: 503 });
+    return Response.json({ error: "The production database schema is incomplete. Apply the initial D1 schema, then refresh the admin workspace." }, { status: 503 });
   }
   return Response.json({ error: "The admin database could not complete this request. Try again, then check the D1 binding if the problem continues." }, { status: 500 });
 }
