@@ -48,7 +48,7 @@ test("navigation works at the current viewport", async ({ page, isMobile }) => {
 
 test("DAEMON executes a real navigation command", async ({ page, isMobile }) => {
   await page.goto("/");
-  if (isMobile) await page.getByRole("button", { name: /Daemon/i }).click();
+  if (isMobile) await page.getByRole("button", { name: "DAEMON online" }).click();
   const command = page.getByLabel("$", { exact: true });
   await command.fill("projects");
   await command.press("Enter");
@@ -68,11 +68,12 @@ test("brand wordmark and updated Growth pricing are rendered", async ({ page }) 
   await expect(page.getByText("£999", { exact: true })).toBeVisible();
 });
 
-test("pricing keeps its values and localizes only the currency symbol", async ({ page }) => {
+test("pricing keeps its values, localizes the symbol and omits conversion disclaimers", async ({ page }) => {
   await page.route("**/api/currency", route => route.fulfill({ json: { currency: "USD" } }));
   await page.goto("/pricing");
   await expect(page.getByText("$999", { exact: true })).toBeVisible();
-  await expect(page.getByText("Showing USD based on your location · values are not converted", { exact: true })).toBeVisible();
+  await expect(page.getByText("Showing USD based on your location · values are not converted", { exact: true })).toHaveCount(0);
+  await expect(page.getByText(/Five practical starting points shown/)).toHaveCount(0);
   await expect(page.getByText("£999", { exact: true })).toHaveCount(0);
 });
 
@@ -147,6 +148,9 @@ test("About portrait reveals with glitch layers and CV content reflects source d
   await expect(page.getByText("Digital Marketer & Web Manager", { exact: true })).toBeVisible();
   await expect(page.getByText("Koha ISBD Cataloguing Assistant", { exact: true })).toBeVisible();
   await expect(page.getByText("Best Graduating Student, Library & Information Science", { exact: true })).toBeVisible();
+  const download = page.getByRole("link", { name: "Download CV" });
+  await expect(download).toHaveCSS("color", "rgb(7, 17, 9)");
+  await expect(download).toHaveCSS("background-color", "rgb(74, 222, 128)");
 });
 
 test("DAEMON window controls minimize, maximize and close", async ({ page, isMobile }) => {
@@ -204,6 +208,8 @@ test("authenticated admin uses friendly forms and a rich article editor", async 
   });
   await page.goto("/admin");
   await expect(page.getByRole("heading", { name: "Workspace overview" })).toBeVisible();
+  await expect(page.getByLabel("DAEMON interactive terminal")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Enable DAEMON on admin" })).toBeVisible();
   await page.getByRole("button", { name: /Projects Case studies/ }).click();
   await page.getByRole("button", { name: "Add project" }).click();
   await expect(page.getByLabel("Project title")).toBeVisible();
@@ -225,18 +231,50 @@ test("admin turns non-JSON Function failures into an actionable error", async ({
   await expect(page.getByText("The admin request failed.", { exact: true })).toHaveCount(0);
 });
 
+test("admin exposes structured route, About and CV content without raw JSON", async ({ page }) => {
+  await page.route("**/api/admin/session", route => route.fulfill({ json: { ok: true, csrf: "test-csrf" } }));
+  await page.route("**/api/admin/data?module=*", route => {
+    const module = new URL(route.request().url()).searchParams.get("module");
+    if (module === "overview") return route.fulfill({ json: { counts: { pages: 2 }, newLeads: 0, draftPosts: 0, publishedPosts: 0, recentLeads: [] } });
+    if (module === "pages") return route.fulfill({ json: { rows: [
+      { id: "page-about", slug: "about", name: "About", seo_title: "About Duke", meta_description: "About Duke", content: "{}", sort_order: 50 },
+      { id: "page-cv", slug: "cv", name: "CV", seo_title: "Duke CV", meta_description: "Duke CV", content: "{}", sort_order: 70 },
+    ] } });
+    return route.fulfill({ json: { rows: [] } });
+  });
+  await page.goto("/admin");
+  await page.getByRole("button", { name: /Pages Route copy/ }).click();
+  await page.getByRole("button", { name: "Edit About" }).click();
+  await expect(page.getByLabel("Hero title")).toHaveValue("Hi, I’m Duke.");
+  await expect(page.getByLabel("Profile paragraph 1")).toBeVisible();
+  await expect(page.getByLabel("Credential titles")).toBeVisible();
+  await expect(page.getByLabel("Record JSON")).toHaveCount(0);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
+
 test("admin exposes free Gmail notifications and configurable autoblogging", async ({ page }) => {
   await page.route("**/api/admin/session", route => route.fulfill({ json: { ok: true, csrf: "test-csrf" } }));
   await page.route("**/api/admin/data?module=overview", route => route.fulfill({ json: { counts: {}, newLeads: 0, draftPosts: 0, publishedPosts: 0, recentLeads: [] } }));
   await page.route("**/api/admin/notifications", route => route.fulfill({ json: { configured: true, provider: "Google Apps Script MailApp", replyMailbox: "buildwithduke@outlook.com" } }));
   await page.route("**/api/admin/autoblog", route => route.fulfill({ json: { configured: { openrouter: true, serpapi: true, scheduler: true }, settings: { id: "primary", enabled: 0, interval_hours: 168, topics: '["AI automation for UK small businesses"]', model: "openrouter/free", search_country: "uk", search_language: "en", publish_mode: "draft", min_words: 900, max_posts_per_month: 4, similarity_threshold: 0.58, next_run_at: null }, runs: [] } }));
+  await page.route("**/api/admin/openrouter-models", route => route.fulfill({ json: { models: [{ id: "openrouter/free", name: "OpenRouter Auto (free)", description: "Free router", provider: "openrouter", contextLength: 200000, promptPrice: 0, completionPrice: 0, isFree: true, modality: "text", supportsTools: true }] } }));
   await page.goto("/admin");
   await page.getByRole("button", { name: /Notifications Free Gmail alerts/ }).click();
   await expect(page.getByRole("heading", { name: "Gmail alerts ready" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Gmail in, Outlook out" })).toBeVisible();
   await page.getByRole("button", { name: /Autoblog Research/ }).click();
   await expect(page.getByRole("heading", { name: "Cadence and editorial brief" })).toBeVisible();
-  await expect(page.locator('input[value="openrouter/free"]')).toBeVisible();
+  const modelPicker = page.getByRole("button", { name: /openrouter\/free/i });
+  await expect(modelPicker).toBeVisible();
+  await modelPicker.click();
+  await expect(page.getByLabel("Search OpenRouter models")).toBeVisible();
+  await expect(page.getByLabel("Filter model provider")).toBeVisible();
+  await expect(page.getByRole("option", { name: /OpenRouter Auto/ })).toBeVisible();
+  const menuBox = await page.locator(".model-picker-menu").boundingBox();
+  const viewport = page.viewportSize();
+  expect(menuBox && viewport).toBeTruthy();
+  expect(menuBox!.x).toBeGreaterThanOrEqual(0);
+  expect(menuBox!.x + menuBox!.width).toBeLessThanOrEqual(viewport!.width);
   await expect(page.getByText("Draft review is the safest default.", { exact: false })).toBeVisible();
 });
 

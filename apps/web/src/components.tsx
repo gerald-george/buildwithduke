@@ -24,16 +24,20 @@ export function Logo() {
   </Link>;
 }
 
-const nav = [["Work", "/projects"], ["Services", "/services"], ["About", "/about"], ["Pricing", "/pricing"], ["Contact", "/contact"]];
+const nav = [["Work", "/projects"], ["Services", "/services"], ["About", "/about"], ["Pricing", "/pricing"], ["Articles", "/blog"], ["Contact", "/contact"]];
 
 export function Layout({ children }: { children: ReactNode }) {
   const [menu, setMenu] = useState(false);
   const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "dark");
   const location = useLocation();
+  const isAdmin = location.pathname.startsWith("/admin");
+  const daemonStorageKey = isAdmin ? "daemon-admin-enabled" : "daemon-public-enabled";
+  const [daemonEnabled, setDaemonEnabled] = useState(() => localStorage.getItem(window.location.pathname.startsWith("/admin") ? "daemon-admin-enabled" : "daemon-public-enabled") === "true" || (!window.location.pathname.startsWith("/admin") && localStorage.getItem("daemon-public-enabled") !== "false"));
   usePageMotion(location.pathname);
   useEffect(() => { document.documentElement.dataset.theme = theme; localStorage.setItem("theme", theme); }, [theme]);
   useEffect(() => { const update = (event: Event) => setTheme(String((event as CustomEvent<string>).detail)); window.addEventListener("daemon-theme", update); return () => window.removeEventListener("daemon-theme", update); }, []);
   useEffect(() => { setMenu(false); window.scrollTo({ top: 0, behavior: "instant" }); }, [location.pathname]);
+  useEffect(() => { const saved = localStorage.getItem(daemonStorageKey); setDaemonEnabled(saved == null ? !isAdmin : saved === "true"); }, [daemonStorageKey, isAdmin]);
   useEffect(() => {
     if (!menu || !window.matchMedia("(max-width: 900px)").matches) return;
     const overflow = document.body.style.overflow;
@@ -49,6 +53,7 @@ export function Layout({ children }: { children: ReactNode }) {
           {nav.map(([label, href]) => <NavLink key={href} to={href}>{label}</NavLink>)}
         </nav>
         <div className="header-actions">
+          <button className={`icon-button daemon-toggle ${daemonEnabled ? "active" : ""}`} onClick={() => setDaemonEnabled(value => { localStorage.setItem(daemonStorageKey, String(!value)); return !value; })} aria-pressed={daemonEnabled} aria-label={`${daemonEnabled ? "Disable" : "Enable"} DAEMON on ${isAdmin ? "admin" : "public pages"}`} title={`${daemonEnabled ? "Hide" : "Show"} DAEMON`}><Terminal size={18} /></button>
           <button className="icon-button" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`} title="Change colour theme">
             {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
           </button>
@@ -61,7 +66,7 @@ export function Layout({ children }: { children: ReactNode }) {
     <main id="main">{children}</main>
     <Footer />
     <ConsentAnalytics />
-    <Daemon />
+    {daemonEnabled && <Daemon />}
     <CookieConsent />
   </>;
 }
@@ -90,12 +95,13 @@ function ConsentAnalytics() {
 }
 
 function Footer() {
-  const { settings } = useContent();
+  const { settings, page } = useContent();
+  const shared = page("common");
   const whatsappUrl = `https://wa.me/${settings.whatsapp_number.replace(/\D/g, "")}?text=${encodeURIComponent("Hi Duke, I found your site and want to talk about a project.")}`;
   return <footer className="footer">
     <div className="shell footer-grid">
-      <div><Logo /><p className="muted">Full-stack products and useful automation.<br />Remote · UK-wide.</p></div>
-      <div><span className="kicker">Go somewhere</span>{nav.slice(0, 4).map(([label, href]) => <Link key={href} to={href}>{label}</Link>)}</div>
+      <div><Logo /><p className="muted">{String(shared.footer_intro || "Full-stack products and useful automation.")}<br />{String(shared.footer_service_area || "Remote · UK-wide.")}</p></div>
+      <div><span className="kicker">Go somewhere</span>{nav.slice(0, 5).map(([label, href]) => <Link key={href} to={href}>{label}</Link>)}</div>
       <div><span className="kicker">Start a conversation</span><a href={`mailto:${settings.contact_email}`}>{settings.contact_email}</a><a href={whatsappUrl} target="_blank" rel="noreferrer">WhatsApp · {settings.phone_display} <ArrowUpRight size={14} /></a></div>
       <div><span className="kicker">Find me</span><a href={settings.github_url} target="_blank" rel="noreferrer"><Github size={15} /> GitHub</a><a href={settings.instagram_url} target="_blank" rel="noreferrer"><Instagram size={15} /> Instagram</a><a href={settings.linkedin_url} target="_blank" rel="noreferrer"><Linkedin size={15} /> LinkedIn</a></div>
     </div>
@@ -139,8 +145,10 @@ export function FAQ({ items }: { items: string[][] }) {
 
 type Log = { id: number; text: string; tone?: string };
 const boot = ["booting daemon v2.0...", "loading awareness modules...", "checking signal... online", "hello. type 'help' to begin."];
+const normalizeCommand = (value: string) => value.toLowerCase().trim().replace(/[?!.,;:]+/g, " ").replace(/\s+/g, " ");
 
 function Daemon() {
+  const { projects, pricing, blogPosts, settings } = useContent();
   const [open, setOpen] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [minimized, setMinimized] = useState(false);
@@ -223,7 +231,7 @@ function Daemon() {
   }, [location.pathname]);
   useEffect(() => {
     fetch("/api/content/daemon").then(response => response.ok ? response.json() : Promise.reject()).then((data: { commands?: Array<{ command: string; response_text: string; action_type?: string; action_target?: string }> }) => {
-      const mapped = Object.fromEntries((data.commands || []).map(item => [item.command, { response: item.response_text, action: item.action_type, target: item.action_target }]));
+      const mapped = Object.fromEntries((data.commands || []).map(item => [normalizeCommand(item.command), { response: item.response_text, action: item.action_type, target: item.action_target }]));
       setCustomCommands(mapped);
     }).catch(() => undefined);
   }, []);
@@ -309,19 +317,20 @@ function Daemon() {
 
   const run = (event: FormEvent) => {
     event.preventDefault();
-    const value = command.trim().toLowerCase();
+    const rawValue = command.trim();
+    const value = normalizeCommand(rawValue);
     if (!value) return;
-    if (value === "clear") { setLogs([]); setCommand(""); return; }
-    addLog(`$ ${value}`, "blue"); setCommand("");
+    if (/^(clear|cls|reset terminal)$/.test(value)) { setLogs([]); setCommand(""); return; }
+    addLog(`$ ${rawValue}`, "blue"); setCommand("");
     const replies: Record<string, string> = {
-      help: "whoami · status · projects · services · pricing · contact · time · theme · clear · sudo hire-duke",
+      help: "Ask about work, services, pricing, availability, timelines, articles, skills, experience, education, contact, privacy or site navigation. Utilities: status · time · date · pwd · ls · theme · clear · sudo hire-duke.",
       whoami: "Duke. Full-stack developer, automation specialist, systems enjoyer.",
       coffee: "status: dangerously well-caffeinated.",
       status: `${navigator.onLine ? "online" : "offline"} · ${location.pathname} · ${Math.round((scrollY / Math.max(1, document.body.scrollHeight - innerHeight)) * 100)}% explored`,
       time: new Date().toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" }),
       date: new Date().toLocaleDateString("en-GB", { dateStyle: "full" }),
       pwd: location.pathname,
-      ls: "projects/  services/  about/  pricing/  contact/",
+      ls: "projects/  services/  about/  cv/  pricing/  blog/  contact/  privacy/  cookies/  terms/",
       theme: `current theme: ${document.documentElement.dataset.theme || "dark"}`,
       hello: "hello. I’m awake and watching the system, not your personal data.",
       hi: "hi. ask for 'status' or type 'help'.",
@@ -334,9 +343,48 @@ function Daemon() {
       if (custom.action === "theme" && ["light", "dark"].includes(custom.target || "")) window.setTimeout(() => window.dispatchEvent(new CustomEvent("daemon-theme", { detail: custom.target })), 150);
     }
     else if (replies[value]) addLog(replies[value], "green");
-    else if (["projects", "work", "services", "pricing", "contact", "about"].includes(value)) { const target = value === "work" ? "projects" : value; addLog(`opening /${target}...`, "green"); window.setTimeout(() => navigate(`/${target}`), 350); }
-    else if (["sudo hire-duke", "hire duke", "hire-duke"].includes(value)) { addLog("permission granted. good decision.", "green"); window.setTimeout(() => navigate("/contact?intent=hire"), 400); }
-    else addLog(`command not found: ${value}. try 'help'.`);
+    else {
+      const routeIntents: Array<[RegExp, string]> = [
+        [/^(home|homepage|go home|take me home)$/, "/"],
+        [/\b(projects?|portfolio|work|case studies)\b/, "/projects"], [/\bservices?\b/, "/services"], [/\bprices?|pricing|packages?|costs?|rates?|budget\b/, "/pricing"],
+        [/\b(contact|email|message|talk|enquiry|quote)\b/, "/contact"], [/\babout|who is duke\b/, "/about"], [/\b(cv|resume|experience|employment|qualifications?)\b/, "/cv"],
+        [/\b(articles?|blog|build log|insights?|posts?)\b/, "/blog"], [/\bprivacy|data policy\b/, "/privacy"], [/\bcookies?\b/, "/cookies"], [/\bterms?\b/, "/terms"],
+      ];
+      const project = projects.find(item => value.includes(normalizeCommand(item.title)) || value.includes(normalizeCommand(item.slug)));
+      const article = blogPosts.find(item => value.includes(normalizeCommand(item.title)) || value.includes(normalizeCommand(item.slug)));
+      if (project) { addLog(`Found ${project.title}. Opening the case study…`, "green"); window.setTimeout(() => navigate(`/projects/${project.slug}`), 350); }
+      else if (article) { addLog(`Found “${article.title}”. Opening the article…`, "green"); window.setTimeout(() => navigate(`/blog/${article.slug}`), 350); }
+      else if (/\b(what can you do|how can you help|commands|options|menu)\b/.test(value)) addLog(replies.help, "green");
+      else if (/\b(dark mode|dark theme)\b/.test(value)) { addLog("Switching to dark mode…", "green"); window.dispatchEvent(new CustomEvent("daemon-theme", { detail: "dark" })); }
+      else if (/\b(light mode|light theme)\b/.test(value)) { addLog("Switching to light mode…", "green"); window.dispatchEvent(new CustomEvent("daemon-theme", { detail: "light" })); }
+      else if (/\b(cookie preferences|manage cookies|consent settings)\b/.test(value)) { addLog("Opening cookie preferences…", "green"); window.dispatchEvent(new Event("open-cookie-preferences")); }
+      else if (/\b(github|source repositories|repos)\b/.test(value)) { addLog("Opening Duke’s GitHub profile…", "green"); window.setTimeout(() => window.open(settings.github_url, "_blank", "noopener,noreferrer"), 250); }
+      else if (/\b(instagram)\b/.test(value)) { addLog("Opening Instagram…", "green"); window.setTimeout(() => window.open(settings.instagram_url, "_blank", "noopener,noreferrer"), 250); }
+      else if (/\b(linkedin)\b/.test(value)) { addLog("Opening LinkedIn…", "green"); window.setTimeout(() => window.open(settings.linkedin_url, "_blank", "noopener,noreferrer"), 250); }
+      else if (/\b(whatsapp|phone number|telephone|call duke)\b/.test(value)) addLog(`Phone / WhatsApp: ${settings.phone_display}. The Contact page has a direct private link.`, "green");
+      else if (/\b(email address|email duke|send email)\b/.test(value)) addLog(`Email: ${settings.contact_email}`, "green");
+      else if (/\b(available|availability|booked|taking projects|open for work)\b/.test(value)) addLog(settings.accepting_projects === "true" ? `Duke is accepting select projects and usually replies ${settings.response_time}.` : `Duke is currently fully booked. You can still send an enquiry for the next opening.`, "green");
+      else if (/\b(tech|stack|skills?|tools?|languages?|frameworks?)\b/.test(value)) addLog("Core stack: React, TypeScript, Cloudflare, Node.js, Python, n8n, OpenRouter, Streamlit, Koha and practical API integrations.", "green");
+      else if (/\b(how long|timeline|delivery|turnaround|weeks?)\b/.test(value)) addLog("Focused sites usually take 2–4 weeks. Product and automation timelines depend on integrations and content; milestones are agreed before development.", "green");
+      else if (/\b(own|ownership|source code|intellectual property|ip rights)\b/.test(value)) addLog("The client owns the finished agreed work after final payment. Third-party licences are identified before they become dependencies.", "green");
+      else if (/\b(revisions?|changes|amendments?)\b/.test(value)) addLog("Packages use structured review rounds so major decisions happen early and refinements stay predictable.", "green");
+      else if (/\b(payment|pay|vat|invoice|bank)\b/.test(value)) addLog("Bank transfer is currently the only payment method. Payment details are shared privately after a quote; no VAT is currently charged.", "green");
+      else if (/\b(where|location|based|remote|uk|nigeria)\b/.test(value)) addLog(`Duke is based in Port Harcourt, Nigeria and works remotely. Public service area: ${settings.service_area}.`, "green");
+      else if (/\b(automation|automate|n8n|workflow)\b/.test(value)) addLog("Duke maps repetitive work, keeps human review where judgement matters, then builds observable n8n or API workflows with failure handling.", "green");
+      else if (/\b(testimonials?|reviews?|feedback|clients?)\b/.test(value)) addLog("Verified client feedback appears on the home page when published from the admin workspace.", "green");
+      else if (/\b(daemon|terminal assistant|are you ai)\b/.test(value)) addLog("DAEMON is a deterministic site guide. It matches intents and admin-managed commands locally; it does not send your query to an AI model.", "green");
+      else if (/\b(faq|frequently asked|questions)\b/.test(value)) addLog("Pricing and the home page include practical FAQs about timing, ownership, revisions and automation.", "green");
+      else if (/\b(latest|recent|new)\b.*\b(article|post|blog)\b/.test(value) && blogPosts[0]) addLog(`Latest article: “${blogPosts[0].title}”. Type its title to open it.`, "green");
+      else if (/\bhow much|what.*cost|packages?\b/.test(value)) addLog(`${pricing.length} pricing options are currently published. Type “pricing” to compare scopes and starting points.`, "green");
+      else if (/^(sudo )?(hire duke|hire-duke)$/.test(value) || /\b(start|build) (a |my )?project\b/.test(value)) { addLog("Opening the project enquiry…", "green"); window.setTimeout(() => navigate("/contact?intent=hire"), 350); }
+      else if (/\b(hello|hi|hey|good morning|good afternoon|good evening)\b/.test(value)) addLog("Hello. Ask me about Duke’s work, services, pricing, experience or availability.", "green");
+      else if (/\b(thanks|thank you|cheers)\b/.test(value)) addLog("You’re welcome. I’ll be here if you want another route or detail.", "green");
+      else {
+        const route = routeIntents.find(([pattern]) => pattern.test(value));
+        if (route) { addLog(`Opening ${route[1]}…`, "green"); window.setTimeout(() => navigate(route[1]), 350); }
+        else addLog(`I could not map that request yet. Try “help”, or ask about work, pricing, skills, articles, timelines or contact.`);
+      }
+    }
   };
   if (dismissed) return <button className="daemon-orb" onClick={() => { setDismissed(false); setMinimized(false); setOpen(true); }} aria-label="Open DAEMON terminal"><Terminal size={20} /></button>;
   const daemonStyle: CSSProperties | undefined = position ? { left: position.x, top: position.y, right: "auto", bottom: "auto" } : undefined;

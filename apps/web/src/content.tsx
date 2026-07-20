@@ -1,6 +1,7 @@
 import { ReactNode, createContext, useContext, useEffect, useMemo, useState } from "react";
 import { Project, pricing as fallbackPricing, projects as fallbackProjects } from "./data";
 import { CONTACT_EMAIL, GITHUB_URL, INSTAGRAM_URL, LINKEDIN_URL, PHONE_DISPLAY, PHONE_NUMBER } from "./site";
+import { PageContent, pageDefinitionBySlug, parsePageContent } from "./pageContent";
 
 export type PricingTier = (typeof fallbackPricing)[number];
 export type Testimonial = { id: string; authorName: string; authorRole?: string; company?: string; quote: string };
@@ -17,6 +18,8 @@ type ContentValue = {
   testimonials: Testimonial[];
   blogPosts: BlogPost[];
   settings: SiteSettings;
+  pages: Record<string, { name: string; path: string; seoTitle: string; metaDescription: string; content: PageContent }>;
+  page: (slug: string) => PageContent;
   loading: boolean;
 };
 
@@ -31,7 +34,10 @@ const defaultSettings: SiteSettings = {
   github_url: GITHUB_URL, instagram_url: INSTAGRAM_URL, linkedin_url: LINKEDIN_URL, accepting_projects: "true",
 };
 
-const ContentContext = createContext<ContentValue>({ projects: fallbackProjects, pricing: fallbackPricing, currency: "GBP", testimonials: [], blogPosts: [], settings: defaultSettings, loading: false });
+const defaultPages = Object.fromEntries(Object.values(pageDefinitionBySlug).map(definition => [definition.slug, {
+  name: definition.name, path: definition.path, seoTitle: definition.seoTitle, metaDescription: definition.metaDescription, content: definition.content,
+}]));
+const ContentContext = createContext<ContentValue>({ projects: fallbackProjects, pricing: fallbackPricing, currency: "GBP", testimonials: [], blogPosts: [], settings: defaultSettings, pages: defaultPages, page: slug => defaultPages[slug]?.content || {}, loading: false });
 
 type ApiPayload = {
   projects?: Array<Record<string, unknown>>;
@@ -39,6 +45,7 @@ type ApiPayload = {
   testimonials?: Array<Record<string, unknown>>;
   blogPosts?: Array<Record<string, unknown>>;
   settings?: Array<Record<string, unknown>>;
+  pages?: Array<Record<string, unknown>>;
 };
 
 const json = <T,>(value: unknown, fallback: T): T => {
@@ -98,7 +105,18 @@ export function ContentProvider({ children }: { children: ReactNode }) {
     const testimonials = (remote.testimonials || []).map(row => ({ id: String(row.id), authorName: String(row.author_name), authorRole: String(row.author_role || ""), company: String(row.company || ""), quote: String(row.quote) }));
     const blogPosts = (remote.blogPosts || []).map(row => ({ id: String(row.id), slug: String(row.slug), title: String(row.title), excerpt: String(row.excerpt || ""), body: String(row.body || ""), publishedAt: String(row.published_at || ""), seoTitle: String(row.seo_title || ""), metaDescription: String(row.meta_description || ""), focusKeyword: String(row.focus_keyword || ""), sourceUrls: json<string[]>(row.source_urls, []), aiGenerated: Boolean(row.ai_generated) }));
     const settings = { ...defaultSettings, ...Object.fromEntries((remote.settings || []).map(row => [String(row.key), String(row.value)])) } as SiteSettings;
-    return { projects, pricing, currency, testimonials, blogPosts, settings, loading };
+    const pages = { ...defaultPages };
+    for (const row of remote.pages || []) {
+      const slug = String(row.slug || "");
+      const definition = pageDefinitionBySlug[slug];
+      if (!definition) continue;
+      pages[slug] = {
+        name: String(row.name || definition.name), path: definition.path,
+        seoTitle: String(row.seo_title || definition.seoTitle), metaDescription: String(row.meta_description || definition.metaDescription),
+        content: { ...definition.content, ...parsePageContent(row.content) },
+      };
+    }
+    return { projects, pricing, currency, testimonials, blogPosts, settings, pages, page: (slug: string) => pages[slug]?.content || {}, loading };
   }, [remote, loading, currency]);
 
   return <ContentContext.Provider value={value}>{children}</ContentContext.Provider>;

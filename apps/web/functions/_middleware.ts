@@ -30,6 +30,11 @@ export const onRequest: PagesFunction<Env> = async context => {
   let schema: Record<string, unknown> | null = null;
   let indexable = routePath !== "/admin";
   let notFound = false;
+  if (title && context.env.DB) {
+    const pageSlug = routePath === "/" ? "home" : routePath.slice(1);
+    const managedPage = await context.env.DB.prepare("SELECT seo_title, meta_description FROM page_content WHERE slug = ?").bind(pageSlug).first<{ seo_title: string; meta_description: string }>().catch(() => null);
+    if (managedPage) { title = managedPage.seo_title || title; description = managedPage.meta_description || description; }
+  }
   if (routePath.startsWith("/projects/")) {
     const slug = routePath.split("/").filter(Boolean).pop() || "";
     const storedProject = context.env.DB ? await context.env.DB.prepare("SELECT slug, title, description, stack, image FROM projects WHERE slug = ?").bind(slug).first<Record<string, unknown>>().catch(() => null) : null;

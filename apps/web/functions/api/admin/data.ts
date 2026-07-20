@@ -4,6 +4,7 @@ import { sanitizeArticleHtml } from "../_shared/html";
 type ModuleName = keyof typeof definitions;
 type RecordValue = Record<string, unknown>;
 const definitions = {
+  pages: { table: "page_content", columns: ["slug", "name", "seo_title", "meta_description", "content", "sort_order"], order: "sort_order ASC" },
   projects: { table: "projects", columns: ["slug", "title", "eyebrow", "description", "problem", "solution", "result", "stack", "result_metrics", "screenshot_r2_keys", "image", "live_url", "demo_flag", "demo_note", "category", "featured", "sort_order"], order: "featured DESC, sort_order ASC, created_at DESC" },
   testimonials: { table: "testimonials", columns: ["author_name", "author_role", "company", "quote", "sort_order"], order: "sort_order ASC" },
   pricing: { table: "pricing_tiers", columns: ["name", "price_gbp", "description", "features", "is_popular", "sort_order"], order: "sort_order ASC" },
@@ -16,6 +17,7 @@ const definitions = {
 const publicSettingKeys = ["business_name", "contact_email", "phone_number", "phone_display", "whatsapp_number", "service_area", "response_time", "github_url", "instagram_url", "linkedin_url", "accepting_projects"] as const;
 const leadStatuses = ["new", "contacted", "quoted", "won", "lost"];
 const postStatuses = ["draft", "published"];
+const pageSlugs = ["home", "projects", "services", "pricing", "about", "contact", "cv", "blog", "privacy", "cookies", "terms", "common"];
 
 const definitionFor = (value: string | null) => value && value in definitions ? definitions[value as ModuleName] : null;
 
@@ -26,13 +28,14 @@ export const onRequestGet: PagesFunction<AdminEnv> = async ({ request, env }) =>
   const module = new URL(request.url).searchParams.get("module");
   try {
     if (module === "overview") {
-      const [projects, testimonials, pricing, leads, commands, posts, settings, newLeads, draftPosts, publishedPosts, recentLeads] = await Promise.all([
+      const [pages, projects, testimonials, pricing, leads, commands, posts, settings, newLeads, draftPosts, publishedPosts, recentLeads] = await Promise.all([
+        count(env.DB, "page_content").catch(() => 0),
         count(env.DB, "projects"), count(env.DB, "testimonials"), count(env.DB, "pricing_tiers"), count(env.DB, "leads"),
         count(env.DB, "daemon_commands", "is_active = 1"), count(env.DB, "blog_posts"), count(env.DB, "business_settings"),
         count(env.DB, "leads", "status = 'new'"), count(env.DB, "blog_posts", "status = 'draft'"), count(env.DB, "blog_posts", "status = 'published'"),
         env.DB.prepare("SELECT id, name, email, project_type, status, created_at FROM leads ORDER BY created_at DESC LIMIT 5").all(),
       ]);
-      return Response.json({ counts: { projects, testimonials, pricing, leads, commands, posts, settings }, newLeads, draftPosts, publishedPosts, recentLeads: recentLeads.results }, { headers: { "Cache-Control": "no-store" } });
+      return Response.json({ counts: { pages, projects, testimonials, pricing, leads, commands, posts, settings }, newLeads, draftPosts, publishedPosts, recentLeads: recentLeads.results }, { headers: { "Cache-Control": "no-store" } });
     }
     const definition = definitionFor(module);
     if (!definition) return Response.json({ error: "Unknown admin module." }, { status: 400 });
@@ -56,6 +59,7 @@ async function mutate({ request, env }: EventContext<AdminEnv, string, unknown>,
   if (!body || !definition) return Response.json({ error: "Invalid admin request." }, { status: 400 });
   if (action === "delete") {
     if (body.module === "leads") return Response.json({ error: "Lead deletion is handled through data-rights workflow." }, { status: 400 });
+    if (body.module === "pages") return Response.json({ error: "Core site pages cannot be deleted." }, { status: 400 });
     const id = String(body.id || "");
     if (!id) return Response.json({ error: "The record id is missing." }, { status: 400 });
     await env.DB.prepare(`DELETE FROM ${definition.table} WHERE id = ?`).bind(id).run();
@@ -91,12 +95,21 @@ async function count(db: D1Database, table: string, where?: string) {
 
 function validateRecord(module: ModuleName, record: RecordValue) {
   const required: Partial<Record<ModuleName, string[]>> = {
+    pages: ["slug", "name", "seo_title", "meta_description", "content"],
     projects: ["slug", "title", "description", "category"], testimonials: ["author_name", "quote"], pricing: ["name", "description"],
     commands: ["command", "response_text"], posts: ["slug", "title", "body", "status"], settings: ["key", "value"], leads: ["status"],
   };
   const missing = required[module]?.find(key => !String(record[key] ?? "").trim());
   if (missing) return `The ${missing.replaceAll("_", " ")} field is required.`;
   if ((module === "projects" || module === "posts") && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(String(record.slug || ""))) return "The URL slug must contain lowercase letters, numbers and single hyphens only.";
+  if (module === "pages" && !pageSlugs.includes(String(record.slug))) return "Choose a supported public page.";
+  if (module === "pages") {
+    let content: unknown = record.content;
+    try { if (typeof content === "string") content = JSON.parse(content); } catch { return "Page content could not be read."; }
+    if (!content || typeof content !== "object" || Array.isArray(content)) return "Page content must use the structured editor.";
+    const invalid = Object.values(content as Record<string, unknown>).some(value => typeof value !== "string" && (!Array.isArray(value) || value.some(item => typeof item !== "string")));
+    if (invalid) return "Page content contains an unsupported value.";
+  }
   if (module === "leads" && !leadStatuses.includes(String(record.status))) return "Choose a valid lead status.";
   if (module === "posts" && !postStatuses.includes(String(record.status))) return "Choose a valid publishing status.";
   if (module === "posts" && String(record.seo_title || "").length > 80) return "Keep the SEO title at 80 characters or fewer.";

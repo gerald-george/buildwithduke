@@ -23,6 +23,35 @@ export function TypingText({ text, className = "" }: { text: string; className?:
   return <span className={`typing-text ${className}`} aria-label={text}><span aria-hidden="true">{visible}</span></span>;
 }
 
+export function ScrollTypingText({ text, className = "" }: { text: string; className?: string }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const [started, setStarted] = useState(false);
+  const [visible, setVisible] = useState("");
+
+  useEffect(() => {
+    setVisible(""); setStarted(false);
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || !("IntersectionObserver" in window)) {
+      setVisible(text); setStarted(true); return;
+    }
+    const element = ref.current;
+    if (!element) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return;
+      setStarted(true); observer.disconnect();
+    }, { threshold: 0.35, rootMargin: "0px 0px -8%" });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [text]);
+
+  useEffect(() => {
+    if (!started || visible.length >= text.length) return;
+    const timer = window.setTimeout(() => setVisible(text.slice(0, visible.length + 1)), 24);
+    return () => window.clearTimeout(timer);
+  }, [started, text, visible]);
+
+  return <span ref={ref} className={`scroll-typing ${visible.length < text.length ? "is-typing" : ""} ${className}`} aria-label={text}><span aria-hidden="true">{visible}</span></span>;
+}
+
 export function RotatingTypingText({ texts, className = "" }: { texts: string[]; className?: string }) {
   const [index, setIndex] = useState(0);
   const [visible, setVisible] = useState("");
