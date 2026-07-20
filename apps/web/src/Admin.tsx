@@ -39,7 +39,7 @@ const modules: Array<{ key: Module; label: string; copy: string; icon: typeof La
   { key: "posts", label: "Articles", copy: "Article drafts and publishing", icon: BookOpen },
   { key: "automation", label: "Autoblog", copy: "Research, cadence and originality", icon: Bot },
   { key: "integrations", label: "Notifications", copy: "Free Gmail alerts and Outlook replies", icon: Cable },
-  { key: "commands", label: "Site guide", copy: "Visitor questions and plain-language replies", icon: Command },
+  { key: "commands", label: "DAEMON", copy: "Terminal commands and visitor-safe replies", icon: Command },
   { key: "settings", label: "Settings", copy: "Business details and site features", icon: Settings2 },
 ];
 
@@ -74,7 +74,7 @@ const settingDefinitions = [
   { value: "instagram_url", label: "Instagram URL", type: "url" },
   { value: "linkedin_url", label: "LinkedIn URL", type: "url" },
   { value: "accepting_projects", label: "Accepting new projects", type: "toggle" },
-  { value: "visitor_guide_enabled", label: "Show visitor site guide", type: "toggle" },
+  { value: "visitor_guide_enabled", label: "Show DAEMON terminal", type: "toggle" },
 ] as const;
 
 const fields: Record<DataModule, Field[]> = {
@@ -130,8 +130,8 @@ const fields: Record<DataModule, Field[]> = {
     { key: "status", label: "Sales status", type: "select", group: "Workflow", options: statusOptions, required: true },
   ],
   commands: [
-    { key: "command", label: "Question or phrase", type: "text", group: "Visitor guidance", required: true, placeholder: "e.g. availability" },
-    { key: "response_text", label: "Plain-language reply", type: "textarea", group: "Visitor guidance", required: true, rows: 5, help: "Write for visitors and avoid implementation, database or publishing-status language." },
+    { key: "command", label: "Command", type: "text", group: "DAEMON response", required: true, placeholder: "e.g. availability" },
+    { key: "response_text", label: "Terminal response", type: "textarea", group: "DAEMON response", required: true, rows: 5, help: "Keep the terminal voice, but never mention implementation, database or publishing-status details." },
     { key: "action_type", label: "Action", type: "select", group: "Behaviour", options: actionOptions },
     { key: "action_target", label: "Action target", type: "text", group: "Behaviour", help: "A route, URL or theme name depending on the selected action." },
     { key: "is_active", label: "Command is active", type: "toggle", group: "Publishing" },
@@ -371,7 +371,7 @@ function OverviewPanel({ data, onOpen }: { data: Overview; onOpen: (module: Modu
     { label: "New leads", value: data.newLeads, copy: "Waiting for a first response", icon: Users, target: "leads" as Module },
     { label: "Published articles", value: data.publishedPosts, copy: `${data.draftPosts} draft${data.draftPosts === 1 ? "" : "s"} in progress`, icon: BookOpen, target: "posts" as Module },
     { label: "Projects", value: data.counts.projects || 0, copy: "Case studies in the portfolio", icon: BriefcaseBusiness, target: "projects" as Module },
-    { label: "Guide answers", value: data.counts.commands || 0, copy: "Active visitor questions and replies", icon: Command, target: "commands" as Module },
+    { label: "Active commands", value: data.counts.commands || 0, copy: "Custom DAEMON responses", icon: Command, target: "commands" as Module },
   ];
   return <div className="admin-overview"><div className="admin-stat-grid">{cards.map(card => { const CardIcon = card.icon; return <button key={card.label} onClick={() => onOpen(card.target)}><span><CardIcon size={18} />{card.label}</span><strong>{card.value}</strong><small>{card.copy}</small><ChevronRight size={17} /></button>; })}</div>
     <section className="admin-panel"><div className="admin-panel-head"><div><span className="kicker">Pipeline</span><h3>Recent enquiries</h3></div><button onClick={() => onOpen("leads")}>View all <ArrowRight size={15} /></button></div>{data.recentLeads.length ? <div className="admin-recent-leads">{data.recentLeads.map(lead => <button key={asString(lead.id)} onClick={() => onOpen("leads")}><span className="lead-avatar">{asString(lead.name).slice(0, 1).toUpperCase()}</span><span><strong>{asString(lead.name)}</strong><small>{asString(lead.project_type) || "General enquiry"} · {formatDate(lead.created_at)}</small></span><StatusBadge value={asString(lead.status)} /></button>)}</div> : <div className="admin-empty-compact"><Mail /><span><strong>No enquiries yet</strong><small>New contact-form submissions will appear here.</small></span></div>}</section>

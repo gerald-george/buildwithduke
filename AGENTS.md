@@ -27,7 +27,7 @@ The Cloudflare Pages project root is `apps/web`. Keep Pages Functions and Cloudf
 - Restrict public business settings to the allowlist shared by the admin API and public content API.
 - Never put bank details, admin secrets, session secrets, API keys, or deployment credentials in public settings or client code.
 - Keep the complete D1 schema in `packages/db/migrations/0001_initial.sql`. This project deliberately uses a single initial migration: update that file when the schema changes and do not add later numbered migration files.
-- Keep implementation language (database state, admin publishing state, deployment details, internal services and placeholder commentary) out of visitor-facing copy, including the public site guide. Feature visibility controls belong in the admin workspace, never in the public header or page controls.
+- Keep implementation language (database state, admin publishing state, deployment details, internal services and placeholder commentary) out of visitor-facing copy, including DAEMON responses. Preserve the site's DAEMON identity and terminal-style presentation. DAEMON visibility controls belong in the admin workspace, never in the public header or page controls.
 - Where a public content type supports imagery, expose a clear R2-backed upload control in its admin editor; do not require an administrator to paste bucket keys or edit JSON.
 
 ## Verification

@@ -1,6 +1,6 @@
 import { CSSProperties, FormEvent, KeyboardEvent, PointerEvent as ReactPointerEvent, ReactNode, useEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
-import { ArrowUpRight, Check, ChevronDown, Cookie, Github, Instagram, Linkedin, Menu, MessageCircle, Moon, Send, Sun, X } from "lucide-react";
+import { ArrowUpRight, Check, ChevronDown, Cookie, Github, Instagram, Linkedin, Menu, MessageCircle, Moon, Send, Sun, Terminal, X } from "lucide-react";
 import {
   SiClaude, SiCloudflare, SiDrizzle, SiFfmpeg, SiGithubactions, SiGooglesheets, SiJavascript, SiN8N,
   SiNextdotjs, SiNodedotjs, SiOpenrouter, SiPerl, SiPython, SiReact, SiStreamlit, SiTelegram,
@@ -141,7 +141,7 @@ export function FAQ({ items }: { items: string[][] }) {
 }
 
 type Log = { id: number; text: string; tone?: string };
-const boot = ["Hi — I can help you find your way around.", "Ask about projects, services, pricing or availability."];
+const boot = ["booting daemon v2.0...", "loading navigation modules...", "checking signal... online", "hello. type 'help' to begin."];
 const normalizeCommand = (value: string) => value.toLowerCase().trim().replace(/[?!.,;:]+/g, " ").replace(/\s+/g, " ");
 
 function Daemon() {
@@ -155,6 +155,7 @@ function Daemon() {
   const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
   const [customCommands, setCustomCommands] = useState<Record<string, { response: string; action?: string; target?: string }>>({});
   const navigate = useNavigate();
+  const location = useLocation();
   const logId = useRef(10);
   const logEnd = useRef<HTMLDivElement>(null);
   const daemonRef = useRef<HTMLElement>(null);
@@ -200,7 +201,8 @@ function Daemon() {
 
   useEffect(() => {
     setLogs([]);
-    const timers = boot.map((text, i) => window.setTimeout(() => setLogs(old => [...old, { id: i, text, tone: i === 1 ? "green" : undefined }]), 250 + i * 350));
+    const timers = boot.map((text, i) => window.setTimeout(() => setLogs(old => [...old, { id: i, text, tone: i === 3 ? "green" : undefined }]), 350 + i * 430));
+    timers.push(window.setTimeout(() => addLog(`session: ${window.innerWidth}×${window.innerHeight} · ${new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`), 2250));
     return () => timers.forEach(clearTimeout);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -231,16 +233,20 @@ function Daemon() {
     const rawValue = command.trim();
     const value = normalizeCommand(rawValue);
     if (!value) return;
-    if (/^(clear|reset)$/.test(value)) { setLogs([]); setCommand(""); return; }
-    addLog(`You: ${rawValue}`, "blue"); setCommand("");
+    if (/^(clear|cls|reset terminal)$/.test(value)) { setLogs([]); setCommand(""); return; }
+    addLog(`$ ${rawValue}`, "blue"); setCommand("");
     const replies: Record<string, string> = {
-      help: "Ask about Duke’s projects, services, pricing, availability, experience, articles or how to get in touch.",
-      whoami: "I’m the site guide. I can point you towards the information you need.",
-      coffee: "Duke takes his coffee seriously.",
+      help: "Ask about work, services, pricing, availability, timelines, articles, skills, experience, education, contact, privacy or navigation. Utilities: status · time · date · pwd · ls · theme · clear · sudo hire-duke.",
+      whoami: "DAEMON. Duke’s terminal companion for navigating the site.",
+      coffee: "status: dangerously well-caffeinated.",
+      status: `${navigator.onLine ? "online" : "offline"} · ${location.pathname} · ${Math.round((scrollY / Math.max(1, document.body.scrollHeight - innerHeight)) * 100)}% explored`,
       time: new Date().toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" }),
       date: new Date().toLocaleDateString("en-GB", { dateStyle: "full" }),
-      hello: "Hello. What would you like to know about Duke’s work?",
-      hi: "Hi. Ask me about projects, services, pricing or availability.",
+      pwd: location.pathname,
+      ls: "projects/  services/  about/  cv/  pricing/  articles/  contact/  privacy/  cookies/  terms/",
+      theme: `current theme: ${document.documentElement.dataset.theme || "dark"}`,
+      hello: "hello. DAEMON online. what are you looking for?",
+      hi: "hi. type 'help' to see what I can do.",
     };
     const custom = customCommands[value];
     if (custom) {
@@ -279,11 +285,11 @@ function Daemon() {
       else if (/\b(where|location|based|remote|uk|nigeria)\b/.test(value)) addLog(`Duke is based in Port Harcourt, Nigeria and works remotely. Public service area: ${settings.service_area}.`, "green");
       else if (/\b(automation|automate|n8n|workflow)\b/.test(value)) addLog("Duke can simplify repetitive work while keeping people involved wherever judgement matters.", "green");
       else if (/\b(testimonials?|reviews?|feedback|clients?)\b/.test(value)) addLog("You can find client feedback alongside the featured work on the home page.", "green");
-      else if (/\b(daemon|terminal assistant|site guide|are you ai)\b/.test(value)) addLog("I’m the site guide. I help visitors find the right page or answer common questions.", "green");
+      else if (/\b(daemon|terminal assistant|site guide|are you ai)\b/.test(value)) addLog("DAEMON online. I can navigate the site and answer common questions about Duke’s work.", "green");
       else if (/\b(faq|frequently asked|questions)\b/.test(value)) addLog("Pricing and the home page include practical FAQs about timing, ownership, revisions and automation.", "green");
       else if (/\b(latest|recent|new)\b.*\b(article|post|blog)\b/.test(value) && blogPosts[0]) addLog(`Latest article: “${blogPosts[0].title}”. Type its title to open it.`, "green");
       else if (/\bhow much|what.*cost|packages?\b/.test(value)) addLog(`${pricing.length} pricing options are available. Type “pricing” to compare scopes and starting points.`, "green");
-      else if (/^(hire duke|hire-duke)$/.test(value) || /\b(start|build) (a |my )?project\b/.test(value)) { addLog("Opening the project enquiry…", "green"); window.setTimeout(() => navigate("/contact?intent=hire"), 350); }
+      else if (/^(sudo )?(hire duke|hire-duke)$/.test(value) || /\b(start|build) (a |my )?project\b/.test(value)) { addLog("Opening the project enquiry…", "green"); window.setTimeout(() => navigate("/contact?intent=hire"), 350); }
       else if (/\b(hello|hi|hey|good morning|good afternoon|good evening)\b/.test(value)) addLog("Hello. Ask me about Duke’s work, services, pricing, experience or availability.", "green");
       else if (/\b(thanks|thank you|cheers)\b/.test(value)) addLog("You’re welcome. I’ll be here if you want another route or detail.", "green");
       else {
@@ -293,24 +299,24 @@ function Daemon() {
       }
     }
   };
-  if (dismissed) return <button className="daemon-orb" onClick={() => { setDismissed(false); setMinimized(false); setOpen(true); }} aria-label="Open site guide"><MessageCircle size={20} /></button>;
+  if (dismissed) return <button className="daemon-orb" onClick={() => { setDismissed(false); setMinimized(false); setOpen(true); }} aria-label="Open DAEMON terminal"><Terminal size={20} /></button>;
   const daemonStyle: CSSProperties | undefined = position ? { left: position.x, top: position.y, right: "auto", bottom: "auto" } : undefined;
   const daemonClass = ["daemon", open ? "open" : "", minimized ? "minimized" : "", maximized ? "maximized" : ""].filter(Boolean).join(" ");
-  return <aside ref={daemonRef} style={daemonStyle} className={daemonClass} aria-label="Interactive site guide">
-    <button className="daemon-mobile-trigger" onClick={() => { setOpen(true); setMinimized(false); }} aria-expanded={open}><MessageCircle size={18} /> <span>Site guide</span></button>
+  return <aside ref={daemonRef} style={daemonStyle} className={daemonClass} aria-label="DAEMON interactive terminal">
+    <button className="daemon-mobile-trigger" onClick={() => { setOpen(true); setMinimized(false); }} aria-expanded={open}><Terminal size={18} /> <span>DAEMON</span><i>online</i></button>
     <div className="daemon-panel">
-      <div className="daemon-bar" role="toolbar" tabIndex={0} aria-label="Move site guide. Drag, or use the arrow keys." onPointerDown={beginDrag} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} onKeyDown={nudgeDaemon}>
+      <div className="daemon-bar" role="toolbar" tabIndex={0} aria-label="Move DAEMON terminal. Drag, or use the arrow keys." onPointerDown={beginDrag} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} onKeyDown={nudgeDaemon}>
         <span className="daemon-controls">
-          <button className="daemon-control daemon-control-close" onClick={() => { setDismissed(true); setMaximized(false); }} aria-label="Close site guide" title="Close" />
-          <button className="daemon-control daemon-control-minimize" onClick={() => { setMinimized(value => !value); setMaximized(false); }} aria-label={minimized ? "Restore site guide" : "Minimize site guide"} title={minimized ? "Restore" : "Minimize"} />
-          <button className="daemon-control daemon-control-maximize" onClick={() => { setMaximized(value => !value); setMinimized(false); }} aria-label={maximized ? "Restore site guide" : "Maximize site guide"} title={maximized ? "Restore" : "Maximize"} />
+          <button className="daemon-control daemon-control-close" onClick={() => { setDismissed(true); setMaximized(false); }} aria-label="Close terminal" title="Close" />
+          <button className="daemon-control daemon-control-minimize" onClick={() => { setMinimized(value => !value); setMaximized(false); }} aria-label={minimized ? "Restore terminal" : "Minimize terminal"} title={minimized ? "Restore" : "Minimize"} />
+          <button className="daemon-control daemon-control-maximize" onClick={() => { setMaximized(value => !value); setMinimized(false); }} aria-label={maximized ? "Restore terminal" : "Maximize terminal"} title={maximized ? "Restore" : "Maximize"} />
         </span>
-        <strong>Site guide</strong>
+        <strong>DAEMON</strong>
       </div>
       <div className="daemon-content">
         <div className="daemon-logs" aria-live="polite">{logs.map(log => <div className={log.tone || ""} key={log.id}><span>›</span> {log.text}</div>)}<div ref={logEnd} /></div>
-        <form className="daemon-input" onSubmit={run}><label htmlFor="daemon-command">Ask</label><input id="daemon-command" value={command} onChange={e => setCommand(e.target.value)} placeholder="What would you like to find?" autoComplete="off" /><button aria-label="Send question"><Send size={15} /></button></form>
-        <button className="daemon-close-mobile" onClick={() => setOpen(false)}>Close guide</button>
+        <form className="daemon-input" onSubmit={run}><label htmlFor="daemon-command">$</label><input id="daemon-command" value={command} onChange={e => setCommand(e.target.value)} placeholder="ask me or type help" autoComplete="off" /><button aria-label="Run command"><Send size={15} /></button></form>
+        <button className="daemon-close-mobile" onClick={() => setOpen(false)}>Close terminal</button>
       </div>
     </div>
   </aside>;

@@ -47,20 +47,23 @@ test("navigation works at the current viewport", async ({ page, isMobile }) => {
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Straightforward pricing");
 });
 
-test("site guide executes a real navigation request", async ({ page, isMobile }) => {
+test("DAEMON keeps its terminal interaction and executes navigation commands", async ({ page, isMobile }) => {
   await page.goto("/");
-  if (isMobile) await page.getByRole("button", { name: "Site guide" }).click();
-  const command = page.getByLabel("Ask", { exact: true });
+  if (isMobile) await page.getByRole("button", { name: /DAEMON/ }).click();
+  const command = page.getByLabel("$", { exact: true });
+  await command.fill("help");
+  await command.press("Enter");
+  await expect(page.getByText(/Utilities: status · time · date · pwd · ls · theme · clear · sudo hire-duke/)).toBeVisible();
   await command.fill("projects");
   await command.press("Enter");
   await expect(page).toHaveURL(/\/projects$/);
 });
 
-test("visitor guide visibility comes from managed settings with no public toggle", async ({ page }) => {
+test("DAEMON visibility comes from managed settings with no public toggle", async ({ page }) => {
   await page.route("**/api/content", route => route.fulfill({ json: { settings: [{ key: "visitor_guide_enabled", value: "false" }] } }));
   await page.goto("/");
-  await expect(page.getByLabel("Interactive site guide")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: /enable|disable|show|hide.*guide/i })).toHaveCount(0);
+  await expect(page.getByLabel("DAEMON interactive terminal")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /enable|disable|show|hide.*DAEMON/i })).toHaveCount(0);
 });
 
 test("brand wordmark and updated Growth pricing are rendered", async ({ page }) => {
@@ -130,12 +133,12 @@ test("project previews include accessible glitch and static hover layers", async
   await expect(preview.locator(".project-static")).toHaveAttribute("aria-hidden", "true");
 });
 
-test("site guide can be repositioned with its drag handle", async ({ page, isMobile }) => {
+test("DAEMON can be repositioned with its drag handle", async ({ page, isMobile }) => {
   test.skip(isMobile, "Desktop drag behavior becomes a bottom sheet on mobile.");
   await page.goto("/");
-  const daemon = page.getByLabel("Interactive site guide");
+  const daemon = page.getByLabel("DAEMON interactive terminal");
   const handle = page.locator(".daemon-bar");
-  await expect(handle.locator("strong")).toHaveText("Site guide");
+  await expect(handle.locator("strong")).toHaveText("DAEMON");
   const before = await daemon.boundingBox();
   const box = await handle.boundingBox();
   expect(before && box).toBeTruthy();
@@ -165,17 +168,17 @@ test("About portrait keeps hover glitch without a scroll reveal and CV content r
   await expect(download).toHaveCSS("background-color", "rgb(74, 222, 128)");
 });
 
-test("site guide window controls minimize, maximize and close", async ({ page, isMobile }) => {
+test("DAEMON terminal controls minimize, maximize and close", async ({ page, isMobile }) => {
   test.skip(isMobile, "Desktop window controls are covered by the mobile bottom-sheet behavior.");
   await page.goto("/");
-  const daemon = page.getByLabel("Interactive site guide");
-  await page.getByRole("button", { name: "Minimize site guide" }).click();
+  const daemon = page.getByLabel("DAEMON interactive terminal");
+  await page.getByRole("button", { name: "Minimize terminal" }).click();
   await expect(daemon).toHaveClass(/minimized/);
-  await page.getByRole("button", { name: "Restore site guide" }).click();
-  await page.getByRole("button", { name: "Maximize site guide" }).click();
+  await page.getByRole("button", { name: "Restore terminal" }).click();
+  await page.getByRole("button", { name: "Maximize terminal" }).click();
   await expect(daemon).toHaveClass(/maximized/);
-  await page.getByRole("button", { name: "Close site guide" }).click();
-  await expect(page.getByRole("button", { name: "Open site guide" })).toBeVisible();
+  await page.getByRole("button", { name: "Close terminal" }).click();
+  await expect(page.getByRole("button", { name: "Open DAEMON terminal" })).toBeVisible();
 });
 
 test("footer uses the public brand credit", async ({ page }) => {
@@ -221,7 +224,7 @@ test("authenticated admin uses friendly forms and a rich article editor", async 
   });
   await page.goto("/admin");
   await expect(page.getByRole("heading", { name: "Workspace overview" })).toBeVisible();
-  await expect(page.getByLabel("Interactive site guide")).toHaveCount(0);
+  await expect(page.getByLabel("DAEMON interactive terminal")).toHaveCount(0);
   await expect(page.getByRole("button", { name: /DAEMON on admin/ })).toHaveCount(0);
   await page.getByRole("button", { name: /Projects Case studies/ }).click();
   await page.getByRole("button", { name: "Add project" }).click();
@@ -238,7 +241,7 @@ test("authenticated admin uses friendly forms and a rich article editor", async 
   await expect(page.locator(".rich-editor .tiptap")).toBeVisible();
 });
 
-test("admin owns the visitor guide visibility setting", async ({ page }) => {
+test("admin owns the DAEMON visibility setting", async ({ page }) => {
   await page.route("**/api/admin/session", route => route.fulfill({ json: { ok: true, csrf: "test-csrf" } }));
   await page.route("**/api/admin/data?module=*", route => {
     const module = new URL(route.request().url()).searchParams.get("module");
@@ -248,8 +251,8 @@ test("admin owns the visitor guide visibility setting", async ({ page }) => {
   });
   await page.goto("/admin");
   await page.getByRole("button", { name: /Settings Business details/ }).click();
-  await page.getByRole("button", { name: "Edit Show visitor site guide" }).click();
-  await expect(page.getByRole("heading", { name: "Show visitor site guide" })).toBeVisible();
+  await page.getByRole("button", { name: "Edit Show DAEMON terminal" }).click();
+  await expect(page.getByRole("heading", { name: "Show DAEMON terminal" })).toBeVisible();
   await expect(page.getByRole("checkbox")).toBeChecked();
 });
 
