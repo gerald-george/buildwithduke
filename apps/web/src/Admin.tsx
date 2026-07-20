@@ -75,6 +75,9 @@ const settingDefinitions = [
   { value: "linkedin_url", label: "LinkedIn URL", type: "url" },
   { value: "accepting_projects", label: "Accepting new projects", type: "toggle" },
   { value: "visitor_guide_enabled", label: "Show DAEMON terminal", type: "toggle" },
+  { value: "industry", label: "Business description", type: "text" },
+  { value: "business_hours", label: "Business hours", type: "text" },
+  { value: "payment_methods", label: "Payment methods", type: "text" },
 ] as const;
 
 const fields: Record<DataModule, Field[]> = {
@@ -519,8 +522,11 @@ function PageContentEditor({ slug, value, disabled, onChange, onFileUpload }: { 
     <section><h4>Education and recognition</h4><ParallelListEditor labels={["Achievement", "Institution and date"]} listKeys={["education_titles", "education_meta"]} content={content} onChange={updateLists} /></section>
     <section><h4>Certifications</h4><ParallelListEditor labels={["Certification", "Provider and date"]} listKeys={["certification_titles", "certification_meta"]} content={content} onChange={updateLists} /></section>
   </div>;
-  const pairedGroups: Record<string, { labels: string[]; keys: string[] }> = slug === "pricing" ? { "Frequently asked questions": { labels: ["Question", "Answer"], keys: ["faq_questions", "faq_answers"] } } : slug === "about" ? { Credentials: { labels: ["Credential", "Detail"], keys: ["credential_titles", "credential_details"] } } : ["privacy", "cookies", "terms"].includes(slug) ? { Section: { labels: ["Section heading", "Section copy"], keys: ["section_titles", "section_copies"] } } : {};
-  return <div className="page-content-editor"><div className="page-editor-map"><strong>{definition.name} page</strong>{groups.map(group => <span key={group}>{group}</span>)}</div>{groups.map(group => <section key={group}><h4>{group}</h4><p>{pageSectionDescription(slug, group)}</p>{pairedGroups[group] ? <ParallelListEditor labels={pairedGroups[group].labels} listKeys={pairedGroups[group].keys} content={content} onChange={updateLists} /> : <div>{Object.entries(content).filter(([key]) => pageFieldGroup(key) === group).map(([key, entry]) => renderField(key, entry))}</div>}</section>)}</div>;
+  const pairedGroups: Record<string, { labels: string[]; keys: string[] }> = slug === "home" ? {
+    Proof: { labels: ["Value", "Outcome", "Explanation"], keys: ["proof_values", "proof_labels", "proof_copies"] },
+    Process: { labels: ["Step", "Explanation", "Terminal line"], keys: ["process_titles", "process_copies", "process_logs"] },
+  } : slug === "pricing" ? { "Frequently asked questions": { labels: ["Question", "Answer"], keys: ["faq_questions", "faq_answers"] } } : slug === "about" ? { Credentials: { labels: ["Credential", "Detail"], keys: ["credential_titles", "credential_details"] } } : ["privacy", "cookies", "terms"].includes(slug) ? { Section: { labels: ["Section heading", "Section copy"], keys: ["section_titles", "section_copies"] } } : {};
+  return <div className="page-content-editor"><div className="page-editor-map"><strong>{definition.name} page</strong>{groups.map(group => <span key={group}>{group}</span>)}</div>{groups.map(group => { const paired = pairedGroups[group]; return <section key={group}><h4>{group}</h4><p>{pageSectionDescription(slug, group)}</p>{paired && <ParallelListEditor labels={paired.labels} listKeys={paired.keys} content={content} onChange={updateLists} />}<div>{Object.entries(content).filter(([key]) => pageFieldGroup(key) === group && !paired?.keys.includes(key)).map(([key, entry]) => renderField(key, entry))}</div></section>; })}</div>;
 }
 
 function ParallelListEditor({ labels, listKeys, content, onChange }: { labels: string[]; listKeys: string[]; content: Record<string, string | string[]>; onChange: (changes: Record<string, string[]>) => void }) {
@@ -531,7 +537,7 @@ function ParallelListEditor({ labels, listKeys, content, onChange }: { labels: s
   };
   const remove = (rowIndex: number) => onChange(Object.fromEntries(listKeys.map((key, index) => [key, lists[index].filter((_, itemIndex) => itemIndex !== rowIndex)])));
   const add = () => onChange(Object.fromEntries(listKeys.map((key, index) => [key, [...lists[index], ""]])));
-  return <div className="parallel-list-editor">{Array.from({ length }, (_, rowIndex) => <article key={rowIndex}><header><strong>Entry {rowIndex + 1}</strong><button type="button" onClick={() => remove(rowIndex)} aria-label={`Remove entry ${rowIndex + 1}`}><Trash2 size={14} /> Remove</button></header><div>{labels.map((label, listIndex) => <label className="admin-field" key={label}><span>{label}</span>{listIndex === 1 && labels.length === 3 ? <textarea rows={4} value={lists[listIndex][rowIndex] || ""} onChange={event => update(listIndex, rowIndex, event.target.value)} /> : <input value={lists[listIndex][rowIndex] || ""} onChange={event => update(listIndex, rowIndex, event.target.value)} />}</label>)}</div></article>)}<button type="button" className="button button-ghost" onClick={add}><Plus size={15} /> Add entry</button></div>;
+  return <div className="parallel-list-editor">{Array.from({ length }, (_, rowIndex) => <article key={rowIndex}><header><strong>Entry {rowIndex + 1}</strong><button type="button" onClick={() => remove(rowIndex)} aria-label={`Remove entry ${rowIndex + 1}`}><Trash2 size={14} /> Remove</button></header><div>{labels.map((label, listIndex) => <label className="admin-field" key={label}><span>{label}</span>{label === "Explanation" || (listIndex === 1 && labels.length === 3) ? <textarea rows={4} value={lists[listIndex][rowIndex] || ""} onChange={event => update(listIndex, rowIndex, event.target.value)} /> : <input value={lists[listIndex][rowIndex] || ""} onChange={event => update(listIndex, rowIndex, event.target.value)} />}</label>)}</div></article>)}<button type="button" className="button button-ghost" onClick={add}><Plus size={15} /> Add entry</button></div>;
 }
 
 function pageSectionDescription(slug: string, group: string) {

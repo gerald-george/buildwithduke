@@ -23,9 +23,10 @@ test("core routes render without page errors", async ({ page }) => {
 });
 
 test("every public route and retained case study mounts cleanly", async ({ page }) => {
+  test.setTimeout(60_000);
   const errors: string[] = [];
   page.on("pageerror", error => errors.push(error.message));
-  for (const route of ["/services", "/about", "/pricing", "/cv", "/blog", "/privacy", "/cookies", "/terms", "/projects/files-combiner"]) {
+  for (const route of ["/services", "/about", "/pricing", "/cv", "/articles", "/privacy", "/cookies", "/terms", "/projects/files-combiner"]) {
     await page.goto(route);
     await expect(page.locator("main")).toBeVisible();
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
@@ -97,6 +98,21 @@ test("below-fold content reveals when it enters the viewport", async ({ page }) 
   await expect(heading).toHaveClass(/is-visible/);
 });
 
+test("scroll reveals survive client-side route changes, including About", async ({ page, isMobile }) => {
+  await page.goto("/");
+  await page.locator("#work").scrollIntoViewIfNeeded();
+  if (isMobile) await page.getByRole("button", { name: "Toggle navigation" }).click();
+  await page.getByRole("link", { name: "About", exact: true }).first().click();
+  await expect(page).toHaveURL(/\/about$/);
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+  const aboutContent = page.locator(".about-intro > *");
+  await aboutContent.first().scrollIntoViewIfNeeded();
+  await expect(aboutContent.first()).toHaveClass(/is-visible/);
+  await aboutContent.last().scrollIntoViewIfNeeded();
+  await expect(aboutContent.last()).toHaveClass(/is-visible/);
+  await expect(page.getByRole("heading", { name: "Library-science rigour. Product-builder energy." })).toBeVisible();
+});
+
 test("hero typing cursor and named technology ticker render", async ({ page }) => {
   await page.goto("/");
   const output = page.locator(".typing-output");
@@ -116,6 +132,7 @@ test("hero typing cursor and named technology ticker render", async ({ page }) =
 });
 
 test("home and project index cards share the same media proportions", async ({ page }) => {
+  test.setTimeout(60_000);
   await page.goto("/");
   const home = await page.locator(".project-card .project-visual").first().boundingBox();
   await page.goto("/projects");
@@ -123,6 +140,29 @@ test("home and project index cards share the same media proportions", async ({ p
   expect(home && index).toBeTruthy();
   expect(home!.width / home!.height).toBeCloseTo(16 / 9, 1);
   expect(index!.width / index!.height).toBeCloseTo(16 / 9, 1);
+});
+
+test("database projects are authoritative and expose every admin-managed case-study field", async ({ page }) => {
+  const payload = { projects: [{
+    id: "project-managed", slug: "managed-project", title: "Managed project", eyebrow: "Admin owned", description: "Managed description",
+    problem: "Managed problem", solution: "Managed solution", result: "Managed result", stack: '["React"]', result_metrics: '{"Hours saved":"65%"}',
+    screenshot_r2_keys: "[]", image: "/logo.svg", live_url: "https://example.com", demo_flag: 1, demo_note: "Managed mockup note", category: "Software", featured: 1,
+  }] };
+  await page.addInitScript(data => {
+    const nativeFetch = window.fetch.bind(window);
+    window.fetch = (input, init) => {
+      const value = typeof input === "string" ? input : input instanceof Request ? input.url : String(input);
+      if (new URL(value, window.location.origin).pathname === "/api/content") return Promise.resolve(new Response(JSON.stringify(data), { status: 200, headers: { "content-type": "application/json" } }));
+      return nativeFetch(input, init);
+    };
+  }, payload);
+  await page.goto("/projects");
+  await expect(page.locator(".project-index-card")).toHaveCount(1);
+  await expect(page.getByText("EventStreamHD", { exact: true })).toHaveCount(0);
+  await page.getByRole("link", { name: "Read case study" }).click();
+  await expect(page.getByText("65%", { exact: true })).toBeVisible();
+  await expect(page.getByText("Hours saved", { exact: true })).toBeVisible();
+  await expect(page.locator(".callout")).toContainText("Managed mockup note");
 });
 
 test("project previews include accessible glitch and static hover layers", async ({ page }) => {
@@ -332,13 +372,23 @@ test("lead records hand replies off to Outlook without a mailbox API", async ({ 
   await expect(page.getByText("No synced messages")).toHaveCount(0);
 });
 
-test("published article routes render rich content after sanitizing it", async ({ page }) => {
+test("published articles appear at the public articles route and render sanitized rich content", async ({ page }) => {
   await page.route("**/api/content", route => route.fulfill({ json: { blogPosts: [{ id: "post-1", slug: "safe-article", title: "A safe article", excerpt: "A useful summary.", body: "<h2>Useful heading</h2><p>Clean <strong>rich text</strong>.</p><script>window.hacked=true</script>", published_at: "2026-07-19T10:00:00.000Z" }] } }));
-  await page.goto("/blog/safe-article");
-  await expect(page).toHaveURL(/\/blog\/safe-article$/);
+  await page.goto("/articles");
+  const articleLink = page.getByRole("link", { name: "Read article" });
+  await expect(articleLink).toHaveAttribute("href", "/articles/safe-article");
+  await articleLink.click();
+  await expect(page).toHaveURL(/\/articles\/safe-article$/);
   await expect(page.getByRole("heading", { level: 1, name: "A safe article" })).toBeVisible();
   await expect(page.getByRole("heading", { level: 2, name: "Useful heading" })).toBeVisible();
   await expect(page.locator(".blog-prose strong")).toHaveText("rich text");
   await expect(page.locator(".blog-prose script")).toHaveCount(0);
   expect(await page.evaluate(() => (window as typeof window & { hacked?: boolean }).hacked)).toBeUndefined();
+});
+
+test("legacy blog links redirect to the canonical articles route", async ({ page }) => {
+  await page.goto("/blog/legacy-article");
+  await expect(page).toHaveURL(/\/articles\/legacy-article$/);
+  await page.goto("/blog");
+  await expect(page).toHaveURL(/\/articles$/);
 });

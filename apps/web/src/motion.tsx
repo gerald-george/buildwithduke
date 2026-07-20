@@ -156,6 +156,22 @@ export function usePageMotion(pathname: string) {
     ].join(", ");
     const observed = new WeakSet<Element>();
     const mobile = window.matchMedia("(max-width: 620px)").matches;
+    let visibilityFrame = 0;
+    const revealVisibleTargets = () => {
+      visibilityFrame = 0;
+      if (!observer) return;
+      const revealLine = window.innerHeight * (mobile ? 0.97 : 0.92);
+      document.querySelectorAll<HTMLElement>(`${selector.split(", ").map(value => `${value}.reveal-item:not(.is-visible)`).join(", ")}`).forEach(target => {
+        const bounds = target.getBoundingClientRect();
+        if (bounds.top <= revealLine && bounds.bottom >= 0) {
+          target.classList.add("is-visible");
+          observer.unobserve(target);
+        }
+      });
+    };
+    const scheduleVisibilityCheck = () => {
+      if (!visibilityFrame) visibilityFrame = window.requestAnimationFrame(revealVisibleTargets);
+    };
     const observer = reduced || !("IntersectionObserver" in window) ? null : new IntersectionObserver(entries => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
@@ -175,11 +191,14 @@ export function usePageMotion(pathname: string) {
         target.classList.add("reveal-item");
         target.style.setProperty("--reveal-delay", `${Math.min(index, 3) * (mobile ? 45 : 70)}ms`);
         if (!observer) target.classList.add("is-visible");
-        else observer.observe(target);
+        else { observer.observe(target); scheduleVisibilityCheck(); }
       });
     };
 
     register();
+    window.addEventListener("scroll", scheduleVisibilityCheck, { passive: true });
+    window.addEventListener("resize", scheduleVisibilityCheck);
+    window.addEventListener("pageshow", scheduleVisibilityCheck);
     const mutations = new MutationObserver(records => records.forEach(record => record.addedNodes.forEach(node => {
       if (node instanceof HTMLElement) {
         if (node.matches(selector)) register(node.parentElement || document);
@@ -187,6 +206,12 @@ export function usePageMotion(pathname: string) {
       }
     })));
     mutations.observe(document.querySelector("main") || document.body, { childList: true, subtree: true });
-    return () => { observer?.disconnect(); mutations.disconnect(); };
+    return () => {
+      observer?.disconnect(); mutations.disconnect();
+      window.removeEventListener("scroll", scheduleVisibilityCheck);
+      window.removeEventListener("resize", scheduleVisibilityCheck);
+      window.removeEventListener("pageshow", scheduleVisibilityCheck);
+      if (visibilityFrame) window.cancelAnimationFrame(visibilityFrame);
+    };
   }, [pathname]);
 }

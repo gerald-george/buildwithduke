@@ -110,6 +110,11 @@ CREATE TABLE business_settings (
   value TEXT NOT NULL
 );
 
+CREATE TABLE content_bootstraps (
+  id TEXT PRIMARY KEY,
+  applied_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS page_content (
   id TEXT PRIMARY KEY,
   slug TEXT UNIQUE NOT NULL,
@@ -174,7 +179,7 @@ INSERT OR IGNORE INTO page_content (id, slug, name, seo_title, meta_description,
 
 INSERT OR IGNORE INTO daemon_commands (id, command, response_text, action_type, action_target) VALUES
   ('daemon-cv', 'cv', 'Opening Duke’s full CV, experience and credentials.', 'navigate', '/cv'),
-  ('daemon-blog', 'articles', 'Opening Duke’s articles.', 'navigate', '/blog'),
+  ('daemon-blog', 'articles', 'Opening Duke’s articles.', 'navigate', '/articles'),
   ('daemon-github', 'github', 'Opening Duke’s public GitHub profile.', 'link', 'https://github.com/build-with-duke'),
   ('daemon-whatsapp', 'whatsapp', 'Opening a private WhatsApp conversation.', 'link', 'https://wa.me/2349152151634'),
   ('daemon-privacy', 'privacy', 'Opening the privacy policy.', 'navigate', '/privacy'),

@@ -1,5 +1,6 @@
 import { AdminEnv, adminDatabaseError, requireAdmin } from "./_auth";
 import { sanitizeArticleHtml } from "../_shared/html";
+import { ensureManagedDefaults } from "../_shared/managed-defaults";
 
 type ModuleName = keyof typeof definitions;
 type RecordValue = Record<string, unknown>;
@@ -14,7 +15,7 @@ const definitions = {
   settings: { table: "business_settings", columns: ["key", "value"], order: "key ASC" },
 } as const;
 
-const publicSettingKeys = ["business_name", "contact_email", "phone_number", "phone_display", "whatsapp_number", "service_area", "response_time", "github_url", "instagram_url", "linkedin_url", "accepting_projects", "visitor_guide_enabled"] as const;
+const publicSettingKeys = ["business_name", "contact_email", "phone_number", "phone_display", "whatsapp_number", "service_area", "response_time", "github_url", "instagram_url", "linkedin_url", "accepting_projects", "visitor_guide_enabled", "industry", "business_hours", "payment_methods"] as const;
 const leadStatuses = ["new", "contacted", "quoted", "won", "lost"];
 const postStatuses = ["draft", "published"];
 const pageSlugs = ["home", "projects", "services", "pricing", "about", "contact", "cv", "blog", "privacy", "cookies", "terms", "common"];
@@ -27,6 +28,7 @@ export const onRequestGet: PagesFunction<AdminEnv> = async ({ request, env }) =>
   if (!env.DB) return Response.json({ error: "The D1 database binding is not configured." }, { status: 503 });
   const module = new URL(request.url).searchParams.get("module");
   try {
+    await ensureManagedDefaults(env.DB);
     if (module === "overview") {
       const [pages, projects, testimonials, pricing, leads, commands, posts, settings, newLeads, draftPosts, publishedPosts, recentLeads] = await Promise.all([
         count(env.DB, "page_content").catch(() => 0),
@@ -67,6 +69,7 @@ async function mutate({ request, env }: EventContext<AdminEnv, string, unknown>,
   }
   const record = body.record || {};
   if (body.module === "posts" && typeof record.body === "string") record.body = sanitizeArticleHtml(record.body);
+  if (body.module === "posts" && record.status === "published" && !record.published_at) record.published_at = new Date().toISOString();
   const validationError = validateRecord(body.module as ModuleName, record);
   if (validationError) return Response.json({ error: validationError }, { status: 400 });
   const columns = definition.columns.filter(column => Object.prototype.hasOwnProperty.call(record, column));
@@ -112,6 +115,7 @@ function validateRecord(module: ModuleName, record: RecordValue) {
   }
   if (module === "leads" && !leadStatuses.includes(String(record.status))) return "Choose a valid lead status.";
   if (module === "posts" && !postStatuses.includes(String(record.status))) return "Choose a valid publishing status.";
+  if (module === "posts" && record.published_at && Number.isNaN(Date.parse(String(record.published_at)))) return "Choose a valid publish date and time.";
   if (module === "posts" && String(record.seo_title || "").length > 80) return "Keep the SEO title at 80 characters or fewer.";
   if (module === "posts" && String(record.meta_description || "").length > 180) return "Keep the meta description at 180 characters or fewer.";
   if (module === "posts" && record.source_urls) {

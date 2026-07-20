@@ -6,6 +6,7 @@ export type Project = {
   problem: string;
   solution: string;
   result: string;
+  resultMetrics?: Record<string, string>;
   stack: string[];
   category: "Web development" | "AI automation" | "Software";
   image: string;
@@ -13,6 +14,7 @@ export type Project = {
   liveUrl: string;
   featured?: boolean;
   demo?: boolean;
+  demoNote?: string;
 };
 
 export const projects: Project[] = [

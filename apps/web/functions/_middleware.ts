@@ -1,4 +1,4 @@
-import { projects as fallbackProjects } from "../src/data";
+import { ensureManagedDefaults } from "./api/_shared/managed-defaults";
 
 interface Env { DB?: D1Database }
 
@@ -11,7 +11,7 @@ const staticMeta: Record<string, [string, string]> = {
   "/about": ["About Duke Chijimaka Jonathan — Full-stack developer", "Meet Duke, a full-stack developer, AI automation specialist and First-Class information-systems graduate working remotely UK-wide."],
   "/contact": ["Start a web or automation project — Build With Duke", "Tell Duke what you need to build, fix or automate. Remote project enquiries are welcome from across the UK."],
   "/cv": ["Duke Chijimaka Jonathan CV — Full-stack and AI automation", "Experience, technical stack, education and selected outcomes from Duke Chijimaka Jonathan."],
-  "/blog": ["Web development and AI automation insights — Build With Duke", "Practical articles about web systems, AI-assisted development, n8n and business automation."],
+  "/articles": ["Web development and AI automation insights — Build With Duke", "Practical articles about web systems, AI-assisted development, n8n and business automation."],
   "/privacy": ["Privacy policy — Build With Duke", "How Build With Duke handles enquiry and website data."],
   "/cookies": ["Cookie policy — Build With Duke", "Necessary storage and optional consent choices on Build With Duke."],
   "/terms": ["Website terms — Build With Duke", "Terms for using the Build With Duke portfolio website."],
@@ -22,6 +22,10 @@ export const onRequest: PagesFunction<Env> = async context => {
   const routePath = url.pathname === "/" ? "/" : url.pathname.replace(/\/+$/, "");
   const acceptsHtml = context.request.method === "GET" && (context.request.headers.get("Accept") || "").includes("text/html");
   if (!acceptsHtml || url.pathname.startsWith("/api/") || /\.[a-z0-9]+$/i.test(url.pathname)) return context.next();
+  if (routePath === "/blog" || routePath.startsWith("/blog/")) {
+    url.pathname = routePath.replace(/^\/blog/, "/articles");
+    return Response.redirect(url.toString(), 308);
+  }
   const response = await context.next();
   if (!(response.headers.get("Content-Type") || "").includes("text/html")) return response;
 
@@ -31,21 +35,25 @@ export const onRequest: PagesFunction<Env> = async context => {
   let indexable = routePath !== "/admin";
   let notFound = false;
   if (title && context.env.DB) {
-    const pageSlug = routePath === "/" ? "home" : routePath.slice(1);
+    const pageSlug = routePath === "/" ? "home" : routePath === "/articles" ? "blog" : routePath.slice(1);
     const managedPage = await context.env.DB.prepare("SELECT seo_title, meta_description FROM page_content WHERE slug = ?").bind(pageSlug).first<{ seo_title: string; meta_description: string }>().catch(() => null);
     if (managedPage) { title = managedPage.seo_title || title; description = managedPage.meta_description || description; }
   }
   if (routePath.startsWith("/projects/")) {
     const slug = routePath.split("/").filter(Boolean).pop() || "";
-    const storedProject = context.env.DB ? await context.env.DB.prepare("SELECT slug, title, description, stack, image FROM projects WHERE slug = ?").bind(slug).first<Record<string, unknown>>().catch(() => null) : null;
-    const project = storedProject || fallbackProjects.find(item => item.slug === slug) as unknown as Record<string, unknown> | undefined;
+    let storedProject = context.env.DB ? await context.env.DB.prepare("SELECT slug, title, description, stack, image FROM projects WHERE slug = ?").bind(slug).first<Record<string, unknown>>().catch(() => null) : null;
+    if (!storedProject && context.env.DB) {
+      await ensureManagedDefaults(context.env.DB).catch(() => undefined);
+      storedProject = await context.env.DB.prepare("SELECT slug, title, description, stack, image FROM projects WHERE slug = ?").bind(slug).first<Record<string, unknown>>().catch(() => null);
+    }
+    const project = storedProject;
     if (project) {
       title = `${project.title} case study — Build With Duke`; description = String(project.description || "");
       schema = { "@context": "https://schema.org", "@type": "CreativeWork", name: project.title, description, url: `${siteUrl}${routePath}`, image: absoluteUrl(String(project.image || "/logo.svg")), author: { "@id": `${siteUrl}/#duke` }, keywords: (Array.isArray(project.stack) ? project.stack.map(String) : parseJson(project.stack)).join(", ") };
     } else { indexable = false; notFound = true; }
-  } else if (routePath.startsWith("/blog/")) {
+  } else if (routePath.startsWith("/articles/")) {
     const slug = routePath.split("/").filter(Boolean).pop() || "";
-    const post = context.env.DB ? await context.env.DB.prepare("SELECT slug, title, excerpt, seo_title, meta_description, focus_keyword, published_at FROM blog_posts WHERE slug = ? AND status = 'published' AND (published_at IS NULL OR published_at <= datetime('now'))").bind(slug).first<Record<string, unknown>>().catch(() => null) : null;
+    const post = context.env.DB ? await context.env.DB.prepare("SELECT slug, title, excerpt, seo_title, meta_description, focus_keyword, published_at FROM blog_posts WHERE slug = ? AND status = 'published' AND (published_at IS NULL OR datetime(published_at) <= datetime('now'))").bind(slug).first<Record<string, unknown>>().catch(() => null) : null;
     if (post) {
       title = String(post.seo_title || `${post.title} — Build With Duke`); description = String(post.meta_description || post.excerpt || "");
       schema = { "@context": "https://schema.org", "@type": "BlogPosting", headline: post.title, description, datePublished: post.published_at, mainEntityOfPage: `${siteUrl}${routePath}`, url: `${siteUrl}${routePath}`, image: `${siteUrl}/logo.png`, author: { "@id": `${siteUrl}/#duke` }, publisher: { "@id": `${siteUrl}/#business` }, keywords: post.focus_keyword || undefined, inLanguage: "en-GB" };
@@ -60,7 +68,7 @@ export const onRequest: PagesFunction<Env> = async context => {
     html = replaceMeta(html, "property", "og:title", title);
     html = replaceMeta(html, "property", "og:description", description);
     html = replaceMeta(html, "property", "og:url", canonical);
-    html = replaceMeta(html, "property", "og:type", routePath.startsWith("/blog/") ? "article" : "website");
+    html = replaceMeta(html, "property", "og:type", routePath.startsWith("/articles/") ? "article" : "website");
     html = replaceMeta(html, "name", "twitter:title", title);
     html = replaceMeta(html, "name", "twitter:description", description);
     html = html.replace(/<link rel="canonical"[^>]*>/i, `<link rel="canonical" href="${escapeAttribute(canonical)}" />`);

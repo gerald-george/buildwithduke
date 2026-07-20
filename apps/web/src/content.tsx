@@ -9,6 +9,7 @@ export type BlogPost = { id: string; slug: string; title: string; excerpt: strin
 export type SiteSettings = {
   business_name: string; contact_email: string; phone_number: string; phone_display: string; whatsapp_number: string;
   service_area: string; response_time: string; github_url: string; instagram_url: string; linkedin_url: string; accepting_projects: string; visitor_guide_enabled: string;
+  industry: string; business_hours: string; payment_methods: string;
 };
 
 type ContentValue = {
@@ -32,6 +33,7 @@ const defaultSettings: SiteSettings = {
   business_name: "Build With Duke", contact_email: CONTACT_EMAIL, phone_number: PHONE_NUMBER, phone_display: PHONE_DISPLAY,
   whatsapp_number: PHONE_NUMBER, service_area: "Remote · UK-wide", response_time: "within 24 hours, UK time",
   github_url: GITHUB_URL, instagram_url: INSTAGRAM_URL, linkedin_url: LINKEDIN_URL, accepting_projects: "true", visitor_guide_enabled: "true",
+  industry: "Full-stack web development and AI automation consultancy", business_hours: "Monday–Sunday, 09:00–22:59 GMT/BST", payment_methods: "Bank transfer only",
 };
 
 const defaultPages = Object.fromEntries(Object.values(pageDefinitionBySlug).map(definition => [definition.slug, {
@@ -89,16 +91,13 @@ export function ContentProvider({ children }: { children: ReactNode }) {
     const remoteProjects = (remote.projects || []).map(row => ({
       slug: String(row.slug), title: String(row.title), eyebrow: mockupLanguage(row.eyebrow || row.category),
       description: mockupLanguage(row.description), problem: mockupLanguage(row.problem || ""), solution: mockupLanguage(row.solution || ""), result: mockupLanguage(row.result || ""),
+      resultMetrics: json<Record<string, string>>(row.result_metrics, {}),
       stack: json<string[]>(row.stack, []), category: String(row.category) as Project["category"],
       image: String(row.image || json<string[]>(row.screenshot_r2_keys, ["/logo.svg"])[0] || "/logo.svg"), gallery: json<string[]>(row.screenshot_r2_keys, []),
-      liveUrl: String(row.live_url || "#"), featured: Boolean(row.featured), demo: Boolean(row.demo_flag),
+      liveUrl: String(row.live_url || "#"), featured: Boolean(row.featured), demo: Boolean(row.demo_flag), demoNote: mockupLanguage(row.demo_note || ""),
     })).filter(project => !isExcludedProject(project.slug));
-    const remoteBySlug = new Map(remoteProjects.map(project => [project.slug, project]));
-    const projects = [
-      ...fallbackProjects.filter(project => !isExcludedProject(project.slug)).map(project => remoteBySlug.get(project.slug) || project),
-      ...remoteProjects.filter(project => !fallbackProjects.some(fallback => fallback.slug === project.slug)),
-    ];
-    const pricing = remote.pricing?.length ? remote.pricing.map(row => ({
+    const projects = remote.projects ? remoteProjects : fallbackProjects.filter(project => !isExcludedProject(project.slug));
+    const pricing = remote.pricing ? remote.pricing.map(row => ({
       name: String(row.name), price: row.price_gbp == null ? "Let’s scope it" : `${symbols[currency]}${Number(row.price_gbp).toLocaleString("en-GB")}`,
       note: String(row.description), features: json<string[]>(row.features, []), popular: Boolean(row.is_popular),
     })) : fallbackPricing.map(tier => ({ ...tier, price: localizePrice(tier.price, currency) }));

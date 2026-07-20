@@ -9,7 +9,6 @@ import {
 import { TbBrandOpenai } from "react-icons/tb";
 import { RevealHeading, usePageMotion } from "./motion";
 import { useContent } from "./content";
-import { businessFacts } from "./site";
 
 export function IconBox({ children }: { children: ReactNode }) {
   return <span className="icon-box" aria-hidden="true">{children}</span>;
@@ -24,7 +23,7 @@ export function Logo() {
   </Link>;
 }
 
-const nav = [["Work", "/projects"], ["Services", "/services"], ["About", "/about"], ["Pricing", "/pricing"], ["Articles", "/blog"], ["Contact", "/contact"]];
+const nav = [["Work", "/projects"], ["Services", "/services"], ["About", "/about"], ["Pricing", "/pricing"], ["Articles", "/articles"], ["Contact", "/contact"]];
 
 export function Layout({ children }: { children: ReactNode }) {
   const [menu, setMenu] = useState(false);
@@ -103,9 +102,9 @@ function Footer() {
       <div><span className="kicker">Find me</span><a href={settings.github_url} target="_blank" rel="noreferrer"><Github size={15} /> GitHub</a><a href={settings.instagram_url} target="_blank" rel="noreferrer"><Instagram size={15} /> Instagram</a><a href={settings.linkedin_url} target="_blank" rel="noreferrer"><Linkedin size={15} /> LinkedIn</a></div>
     </div>
     <div className="shell business-facts" aria-label="Business facts">
-      <div><small>Studio</small><strong>{settings.business_name}</strong><span>{businessFacts.industry}</span></div>
-      <div><small>Availability</small><strong>{settings.service_area}</strong><span>{businessFacts.hours}</span></div>
-      <div><small>Payments</small><strong>{businessFacts.paymentMethods}</strong><span>Details shared privately after an agreed quote.</span></div>
+      <div><small>Studio</small><strong>{settings.business_name}</strong><span>{settings.industry}</span></div>
+      <div><small>Availability</small><strong>{settings.service_area}</strong><span>{settings.business_hours}</span></div>
+      <div><small>Payments</small><strong>{settings.payment_methods}</strong><span>Details shared privately after an agreed quote.</span></div>
     </div>
     <div className="shell footer-bottom"><span>© {new Date().getFullYear()} {settings.business_name}</span><span><Link to="/privacy">Privacy</Link> · <Link to="/cookies">Cookies</Link> · <Link to="/terms">Terms</Link> · <button className="footer-preferences" onClick={() => window.dispatchEvent(new Event("open-cookie-preferences"))}>Cookie preferences</button></span><Link className="built-with-love" to="/about">// built with <span role="img" aria-label="love">❤️</span></Link></div>
   </footer>;
@@ -136,7 +135,7 @@ export function ProjectVisual({ image, title }: { image: string; title: string }
   return <div className="project-visual"><img src={image} alt={`${title} website preview`} loading="lazy" /><img className="project-glitch" src={image} alt="" loading="lazy" aria-hidden="true" /><span className="project-static" aria-hidden="true" /><span className="visual-scan" aria-hidden="true" /></div>;
 }
 
-export function FAQ({ items }: { items: string[][] }) {
+export function FAQ({ items }: { items: ReadonlyArray<ReadonlyArray<string>> }) {
   return <div className="faq-list">{items.map(([q, a], i) => <details key={q} open={i === 0}><summary><span><em>0{i + 1}</em>{q}</span><ChevronDown size={19} /></summary><p>{a}</p></details>)}</div>;
 }
 
@@ -261,12 +260,12 @@ function Daemon() {
         [/^(home|homepage|go home|take me home)$/, "/"],
         [/\b(projects?|portfolio|work|case studies)\b/, "/projects"], [/\bservices?\b/, "/services"], [/\bprices?|pricing|packages?|costs?|rates?|budget\b/, "/pricing"],
         [/\b(contact|email|message|talk|enquiry|quote)\b/, "/contact"], [/\babout|who is duke\b/, "/about"], [/\b(cv|resume|experience|employment|qualifications?)\b/, "/cv"],
-        [/\b(articles?|blog|build log|insights?|posts?)\b/, "/blog"], [/\bprivacy|data policy\b/, "/privacy"], [/\bcookies?\b/, "/cookies"], [/\bterms?\b/, "/terms"],
+        [/\b(articles?|blog|build log|insights?|posts?)\b/, "/articles"], [/\bprivacy|data policy\b/, "/privacy"], [/\bcookies?\b/, "/cookies"], [/\bterms?\b/, "/terms"],
       ];
       const project = projects.find(item => value.includes(normalizeCommand(item.title)) || value.includes(normalizeCommand(item.slug)));
       const article = blogPosts.find(item => value.includes(normalizeCommand(item.title)) || value.includes(normalizeCommand(item.slug)));
       if (project) { addLog(`Found ${project.title}. Opening the case study…`, "green"); window.setTimeout(() => navigate(`/projects/${project.slug}`), 350); }
-      else if (article) { addLog(`Found “${article.title}”. Opening the article…`, "green"); window.setTimeout(() => navigate(`/blog/${article.slug}`), 350); }
+      else if (article) { addLog(`Found “${article.title}”. Opening the article…`, "green"); window.setTimeout(() => navigate(`/articles/${article.slug}`), 350); }
       else if (/\b(what can you do|how can you help|commands|options|menu)\b/.test(value)) addLog(replies.help, "green");
       else if (/\b(dark mode|dark theme)\b/.test(value)) { addLog("Switching to dark mode…", "green"); window.dispatchEvent(new CustomEvent("daemon-theme", { detail: "dark" })); }
       else if (/\b(light mode|light theme)\b/.test(value)) { addLog("Switching to light mode…", "green"); window.dispatchEvent(new CustomEvent("daemon-theme", { detail: "light" })); }
@@ -281,7 +280,7 @@ function Daemon() {
       else if (/\b(how long|timeline|delivery|turnaround|weeks?)\b/.test(value)) addLog("Focused sites usually take 2–4 weeks. Product and automation timelines depend on integrations and content; milestones are agreed before development.", "green");
       else if (/\b(own|ownership|source code|intellectual property|ip rights)\b/.test(value)) addLog("The client owns the finished agreed work after final payment. Third-party licences are identified before they become dependencies.", "green");
       else if (/\b(revisions?|changes|amendments?)\b/.test(value)) addLog("Packages use structured review rounds so major decisions happen early and refinements stay predictable.", "green");
-      else if (/\b(payment|pay|vat|invoice|bank)\b/.test(value)) addLog("Bank transfer is currently the only payment method. Payment details are shared privately after a quote; no VAT is currently charged.", "green");
+      else if (/\b(payment|pay|vat|invoice|bank)\b/.test(value)) addLog(`${settings.payment_methods}. Payment details are shared privately after a quote; no VAT is currently charged.`, "green");
       else if (/\b(where|location|based|remote|uk|nigeria)\b/.test(value)) addLog(`Duke is based in Port Harcourt, Nigeria and works remotely. Public service area: ${settings.service_area}.`, "green");
       else if (/\b(automation|automate|n8n|workflow)\b/.test(value)) addLog("Duke can simplify repetitive work while keeping people involved wherever judgement matters.", "green");
       else if (/\b(testimonials?|reviews?|feedback|clients?)\b/.test(value)) addLog("You can find client feedback alongside the featured work on the home page.", "green");

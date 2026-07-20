@@ -2,11 +2,10 @@ import { FormEvent, lazy, ReactNode, Suspense, useEffect, useMemo, useState } fr
 import { Link, Navigate, Route, Routes, useLocation, useParams } from "react-router-dom";
 import { ArrowDown, ArrowRight, ArrowUpRight, Award, BookOpen, Bot, Check, CheckCircle2, CircleDot, Clock3, Code2, Download, ExternalLink, Github, Globe2, GraduationCap, Mail, MapPin, MessageCircle, Send, ShieldCheck, Workflow, Wrench } from "lucide-react";
 import { FAQ, IconBox, Layout, ProjectVisual, SectionHead, TechTicker, TerminalWindow, WhatsAppLink } from "./components";
-import { faq } from "./data";
 import { ContentProvider, Testimonial, useContent } from "./content";
 import { RevealHeading, RotatingTypingText, ScrollTypingText } from "./motion";
 import { PageContent } from "./pageContent";
-import { CONTACT_EMAIL, SITE_URL } from "./site";
+import { SITE_URL } from "./site";
 import DOMPurify from "dompurify";
 
 const Admin = lazy(() => import("./Admin"));
@@ -19,7 +18,7 @@ const meta: Record<string, [string, string]> = {
   "/about": ["About Duke — buildwithduke", "Full-stack developer, AI automation specialist and systems thinker."],
   "/contact": ["Start a project — buildwithduke", "Tell Duke what you need to build, fix or automate."],
   "/cv": ["Duke’s CV — buildwithduke", "Duke Chijimaka Jonathan’s experience, technical stack, education and selected outcomes."],
-  "/blog": ["Articles — buildwithduke", "Practical notes on web systems, AI-assisted development and automation."],
+  "/articles": ["Articles — buildwithduke", "Practical notes on web systems, AI-assisted development and automation."],
   "/privacy": ["Privacy policy — buildwithduke", "How buildwithduke handles enquiry and website data."],
   "/cookies": ["Cookie policy — buildwithduke", "Necessary storage and optional consent choices on buildwithduke."],
   "/terms": ["Website terms — buildwithduke", "Terms for using the buildwithduke portfolio website."],
@@ -29,11 +28,12 @@ function PageMeta() {
   const { pathname } = useLocation();
   const { projects, blogPosts, pages } = useContent();
   useEffect(() => {
-    const key = pathname.startsWith("/projects/") ? "/projects" : pathname.startsWith("/blog/") ? "/blog" : pathname;
+    const key = pathname.startsWith("/projects/") ? "/projects" : pathname.startsWith("/articles/") ? "/articles" : pathname;
     const project = pathname.startsWith("/projects/") ? projects.find(item => item.slug === pathname.split("/").pop()) : undefined;
-    const article = pathname.startsWith("/blog/") ? blogPosts.find(item => item.slug === pathname.split("/").pop()) : undefined;
-    const pageSlug = key === "/" ? "home" : key.slice(1);
+    const article = pathname.startsWith("/articles/") ? blogPosts.find(item => item.slug === pathname.split("/").pop()) : undefined;
+    const pageSlug = key === "/" ? "home" : key === "/articles" ? "blog" : key.slice(1);
     const managedPage = pages[pageSlug];
+    const pricingFaq = pageList(pages.pricing?.content || {}, "faq_questions").map((question, index) => [question, pageList(pages.pricing?.content || {}, "faq_answers")[index] || ""]);
     const value = project ? [`${project.title} case study — buildwithduke`, project.description] : article ? [article.seoTitle || `${article.title} — buildwithduke`, article.metaDescription || article.excerpt] : managedPage ? [managedPage.seoTitle, managedPage.metaDescription] : meta[key] || ["buildwithduke", "Full-stack products and useful automation."];
     document.title = value[0];
     document.querySelector('meta[name="description"]')?.setAttribute("content", value[1]);
@@ -45,7 +45,7 @@ function PageMeta() {
     document.querySelector('meta[name="twitter:description"]')?.setAttribute("content", value[1]);
     document.querySelector('link[rel="canonical"]')?.setAttribute("href", `${SITE_URL}${pathname}`);
     const oldSchema = document.getElementById("route-schema"); oldSchema?.remove();
-    const schema = project ? { "@context": "https://schema.org", "@type": "CreativeWork", name: project.title, description: project.description, url: `${SITE_URL}/projects/${project.slug}`, image: `${SITE_URL}${project.image}`, author: { "@type": "Person", name: "Duke Chijimaka Jonathan", url: `${SITE_URL}/about` }, keywords: project.stack.join(", ") } : article ? { "@context": "https://schema.org", "@type": "BlogPosting", headline: article.title, description: article.excerpt, datePublished: article.publishedAt, url: `${SITE_URL}/blog/${article.slug}`, author: { "@type": "Person", name: "Duke Chijimaka Jonathan", url: `${SITE_URL}/about` } } : pathname === "/pricing" || pathname === "/" ? { "@context": "https://schema.org", "@type": "FAQPage", mainEntity: faq.map(([question, answer]) => ({ "@type": "Question", name: question, acceptedAnswer: { "@type": "Answer", text: answer } })) } : null;
+    const schema = project ? { "@context": "https://schema.org", "@type": "CreativeWork", name: project.title, description: project.description, url: `${SITE_URL}/projects/${project.slug}`, image: `${SITE_URL}${project.image}`, author: { "@type": "Person", name: "Duke Chijimaka Jonathan", url: `${SITE_URL}/about` }, keywords: project.stack.join(", ") } : article ? { "@context": "https://schema.org", "@type": "BlogPosting", headline: article.title, description: article.excerpt, datePublished: article.publishedAt, url: `${SITE_URL}/articles/${article.slug}`, author: { "@type": "Person", name: "Duke Chijimaka Jonathan", url: `${SITE_URL}/about` } } : pathname === "/pricing" || pathname === "/" ? { "@context": "https://schema.org", "@type": "FAQPage", mainEntity: pricingFaq.map(([question, answer]) => ({ "@type": "Question", name: question, acceptedAnswer: { "@type": "Answer", text: answer } })) } : null;
     if (schema) { const script = document.createElement("script"); script.id = "route-schema"; script.type = "application/ld+json"; script.text = JSON.stringify(schema); document.head.appendChild(script); }
   }, [pathname, projects, blogPosts, pages]);
   return null;
@@ -61,8 +61,10 @@ export default function App() {
     <Route path="/about" element={<About />} />
     <Route path="/contact" element={<Contact />} />
     <Route path="/cv" element={<ManagedCV />} />
-    <Route path="/blog/:slug" element={<BlogDetail />} />
-    <Route path="/blog" element={<Blog />} />
+    <Route path="/articles/:slug" element={<BlogDetail />} />
+    <Route path="/articles" element={<Blog />} />
+    <Route path="/blog/:slug" element={<LegacyArticleRedirect />} />
+    <Route path="/blog" element={<Navigate to="/articles" replace />} />
     <Route path="/privacy" element={<Legal type="privacy" />} />
     <Route path="/cookies" element={<Legal type="cookies" />} />
     <Route path="/terms" element={<Legal type="terms" />} />
@@ -72,8 +74,12 @@ export default function App() {
 }
 
 function Home() {
-  const { projects, pricing, testimonials, blogPosts, page } = useContent();
+  const { projects, pricing, testimonials, blogPosts, settings, page } = useContent();
   const copy = page("home");
+  const pricingCopy = page("pricing");
+  const homeFaq = zip2(pageList(pricingCopy, "faq_questions"), pageList(pricingCopy, "faq_answers"));
+  const proof = zip3(pageList(copy, "proof_values"), pageList(copy, "proof_labels"), pageList(copy, "proof_copies"));
+  const process = zip3(pageList(copy, "process_titles"), pageList(copy, "process_copies"), pageList(copy, "process_logs"));
   return <>
     <section className="hero">
       <div className="hero-grid" aria-hidden="true" />
@@ -83,16 +89,16 @@ function Home() {
           <h1><span>I build </span><RotatingTypingText texts={pageList(copy, "hero_rotating_lines")} /></h1>
           <p>{pageText(copy, "hero_intro")}</p>
           <div className="button-row"><Link className="button button-primary" to="/contact">Start a project <ArrowRight size={17} /></Link><Link className="button button-ghost" to="/projects">View live work <ArrowDown size={17} /></Link></div>
-          <div className="hero-meta"><span><MapPin size={15} /> Remote · UK-wide</span><span><Clock3 size={15} /> Replies within 24h</span></div>
+          <div className="hero-meta"><span><MapPin size={15} /> {settings.service_area}</span><span><Clock3 size={15} /> Replies {settings.response_time}</span></div>
         </div>
         <div className="hero-system" aria-label="Current system status">
           <div className="system-head"><span>duke@buildwithduke:~</span><CircleDot size={16} /></div>
           <div className="system-console">
             <div className="system-command"><span>$</span><code>duke --status --plain</code></div>
-            <div className="system-output"><div><span>focus</span><strong>web products + AI automation</strong></div><div><span>method</span><strong>clarify → build → observe</strong></div><div><span>signal</span><strong>shipping, not theatre</strong></div></div>
-            <div className="system-ready"><i /> ready for a useful problem<span aria-hidden="true">_</span></div>
+            <div className="system-output"><div><span>focus</span><strong>{pageText(copy, "system_focus")}</strong></div><div><span>method</span><strong>{pageText(copy, "system_method")}</strong></div><div><span>signal</span><strong>{pageText(copy, "system_signal")}</strong></div></div>
+            <div className="system-ready"><i /> {pageText(copy, "system_ready")}<span aria-hidden="true">_</span></div>
           </div>
-          <div className="system-stats"><div><strong>22</strong><span>public repos</span></div><div><strong>99%</strong><span>data integrity</span></div><div><strong>1st</strong><span>class honours</span></div></div>
+          <div className="system-stats"><div><strong>{pageText(copy, "system_repo_count")}</strong><span>public repos</span></div><div><strong>{pageText(copy, "system_integrity")}</strong><span>data integrity</span></div><div><strong>{pageText(copy, "system_education")}</strong><span>class honours</span></div></div>
         </div>
       </div>
       <TechTicker />
@@ -100,29 +106,24 @@ function Home() {
 
     <section className="section shell" id="work"><SectionHead label="01 / Selected work" title={pageText(copy, "work_heading")} copy={pageText(copy, "work_intro")} />
       <div className="featured-grid">{projects.filter(p => p.featured).map(project => <TerminalWindow key={project.slug} label={`~/projects/${project.slug}`} className="project-card">
-        <ProjectVisual image={project.image} title={project.title} /><div className="project-card-body"><div className="project-eyebrow">{project.eyebrow}</div><h3>{project.title}</h3><p>{project.description}</p><div className="tag-row">{project.stack.slice(0, 3).map(t => <span key={t}>{t}</span>)}</div>{project.demo && <div className="demo-note"><CircleDot size={13} /> Mockup build · live client agreement in place</div>}<div className="card-actions"><Link to={`/projects/${project.slug}`}>Case study <ArrowRight size={15} /></Link><a href={project.liveUrl} target="_blank" rel="noreferrer">Visit <ArrowUpRight size={15} /></a></div></div>
+        <ProjectVisual image={project.image} title={project.title} /><div className="project-card-body"><div className="project-eyebrow">{project.eyebrow}</div><h3>{project.title}</h3><p>{project.description}</p><div className="tag-row">{project.stack.slice(0, 3).map(t => <span key={t}>{t}</span>)}</div>{project.demo && <div className="demo-note"><CircleDot size={13} /> {project.demoNote || "Mockup build · live client agreement in place"}</div>}<div className="card-actions"><Link to={`/projects/${project.slug}`}>Case study <ArrowRight size={15} /></Link><a href={project.liveUrl} target="_blank" rel="noreferrer">Visit <ArrowUpRight size={15} /></a></div></div>
       </TerminalWindow>)}</div>
       <div className="section-end"><Link className="text-link" to="/projects">Explore every project <ArrowRight size={16} /></Link></div>
     </section>
 
     <section className="proof-band"><div className="shell proof-grid"><div className="whoami"><span className="prompt">$ whoami</span><blockquote>“{pageText(copy, "proof_quote")}”</blockquote><span className="cursor-line">duke@buildwithduke <i /></span></div><div className="proof-list">
-      {[['65%', 'less manual workload', 'Automation that returns hours to the people doing the work.'], ['73%', 'lead growth', 'Digital systems designed around an outcome, not decoration.'], ['1M+', 'views in seven days', 'Campaign infrastructure ready when attention arrives.'], ['99%', 'data integrity', 'Library-science rigour applied to production software.']].map(([num, label, copy]) => <div key={num}><strong>{num}</strong><span>{label}</span><p>{copy}</p></div>)}
+      {proof.map(([num, label, detail]) => <div key={`${num}-${label}`}><strong>{num}</strong><span>{label}</span><p>{detail}</p></div>)}
     </div></div></section>
 
-    <section className="section shell"><SectionHead label="02 / The process" title={pageText(copy, "process_heading")} copy={pageText(copy, "process_intro")} /><div className="process-grid">{[
-      ['01', 'Discover', 'Map the problem, users, constraints and the outcome worth paying for.', '$ context --load'],
-      ['02', 'Design', 'Shape the flow and visual system before expensive code decisions settle.', '$ prototype --test'],
-      ['03', 'Build', 'Ship in visible increments with clean interfaces and sensible adapters.', '$ build --observe'],
-      ['04', 'Launch', 'Test the real journey, document the system and stay close after go-live.', '$ deploy --steady'],
-    ].map(([n, title, copy, log]) => <div key={n} className="process-step"><span>{n}</span><h3>{title}</h3><p>{copy}</p><code>{log}</code></div>)}</div></section>
+    <section className="section shell"><SectionHead label="02 / The process" title={pageText(copy, "process_heading")} copy={pageText(copy, "process_intro")} /><div className="process-grid">{process.map(([title, detail, log], index) => <div key={`${title}-${index}`} className="process-step"><span>{String(index + 1).padStart(2, "0")}</span><h3>{title}</h3><p>{detail}</p><code>{log}</code></div>)}</div></section>
 
     <section className="section section-lined"><div className="shell"><SectionHead label="03 / Pricing preview" title={pageText(copy, "pricing_heading")} copy={pageText(copy, "pricing_intro")} /><div className="pricing-preview">{[pricing[0], pricing[2], pricing[3]].filter(Boolean).map(t => <PriceCard key={t.name} tier={t} />)}</div><div className="section-end"><Link className="text-link" to="/pricing">Compare all five packages <ArrowRight size={16} /></Link></div></div></section>
 
-    {blogPosts.length > 0 && <section className="section shell"><SectionHead label="04 / Articles" title={pageText(copy, "articles_heading")} copy={pageText(copy, "articles_intro")} /><div className="blog-grid">{blogPosts.slice(0, 3).map((post, index) => <article key={post.id}>{post.coverImage && <img className="blog-card-image" src={post.coverImage} alt="" loading="lazy" />}<span className="kicker">Article · {String(index + 1).padStart(2, "0")}</span><RevealHeading text={post.title} variant="decrypt" /><p>{post.excerpt}</p><Link className="blog-read-link" to={`/blog/${post.slug}`}>Read article <ArrowRight size={15} /></Link></article>)}</div><div className="section-end"><Link className="text-link" to="/blog">Browse every article <ArrowRight size={16} /></Link></div></section>}
+    {blogPosts.length > 0 && <section className="section shell"><SectionHead label="04 / Articles" title={pageText(copy, "articles_heading")} copy={pageText(copy, "articles_intro")} /><div className="blog-grid">{blogPosts.slice(0, 3).map((post, index) => <article key={post.id}>{post.coverImage && <img className="blog-card-image" src={post.coverImage} alt="" loading="lazy" />}<span className="kicker">Article · {String(index + 1).padStart(2, "0")}</span><RevealHeading text={post.title} variant="decrypt" /><p>{post.excerpt}</p><Link className="blog-read-link" to={`/articles/${post.slug}`}>Read article <ArrowRight size={15} /></Link></article>)}</div><div className="section-end"><Link className="text-link" to="/articles">Browse every article <ArrowRight size={16} /></Link></div></section>}
 
     {testimonials.length > 0 && <Testimonials items={testimonials} />}
 
-    <section className="section shell faq-section"><SectionHead label="05 / Before you ask" title={pageText(copy, "faq_heading")} /><FAQ items={faq.slice(0, 4)} /></section>
+    <section className="section shell faq-section"><SectionHead label="05 / Before you ask" title={pageText(copy, "faq_heading")} /><FAQ items={homeFaq.slice(0, 4)} /></section>
     <CTA />
   </>;
 }
@@ -142,10 +143,10 @@ function Projects() {
   const { projects, page } = useContent();
   const copy = page("projects");
   const [filter, setFilter] = useState("All");
-  const shown = useMemo(() => filter === "All" ? projects : projects.filter(p => p.category === filter), [filter]);
+  const shown = useMemo(() => filter === "All" ? projects : projects.filter(p => p.category === filter), [filter, projects]);
   return <><PageHero label="/projects" title={pageText(copy, "hero_title")} copy={pageText(copy, "hero_intro")} />
     <section className="section shell"><div className="filter-bar" role="group" aria-label="Filter projects">{["All", "Web development", "AI automation", "Software"].map(item => <button aria-pressed={filter === item} onClick={() => setFilter(item)} key={item}>{item}</button>)}</div>
-      <div className="project-index">{shown.map(project => <TerminalWindow label={`~/projects/${project.slug}`} key={project.slug} className="project-index-card"><ProjectVisual image={project.image} title={project.title} /><div className="project-card-body"><div className="project-eyebrow">{project.eyebrow}</div><h2>{project.title}</h2><p>{project.description}</p><div className="tag-row">{project.stack.map(t => <span key={t}>{t}</span>)}</div>{project.demo && <div className="demo-note"><CircleDot size={13} /> Mockup build · live client agreement in place</div>}<div className="card-actions"><Link to={`/projects/${project.slug}`}>Read case study <ArrowRight size={15} /></Link><a href={project.liveUrl} target="_blank" rel="noreferrer">Open live <ArrowUpRight size={15} /></a></div></div></TerminalWindow>)}</div>
+      <div className="project-index">{shown.map(project => <TerminalWindow label={`~/projects/${project.slug}`} key={project.slug} className="project-index-card"><ProjectVisual image={project.image} title={project.title} /><div className="project-card-body"><div className="project-eyebrow">{project.eyebrow}</div><h2>{project.title}</h2><p>{project.description}</p><div className="tag-row">{project.stack.map(t => <span key={t}>{t}</span>)}</div>{project.demo && <div className="demo-note"><CircleDot size={13} /> {project.demoNote || "Mockup build · live client agreement in place"}</div>}<div className="card-actions"><Link to={`/projects/${project.slug}`}>Read case study <ArrowRight size={15} /></Link><a href={project.liveUrl} target="_blank" rel="noreferrer">Open live <ArrowUpRight size={15} /></a></div></div></TerminalWindow>)}</div>
     </section><CTA /></>;
 }
 
@@ -156,7 +157,7 @@ function ProjectDetail() {
   if (!project) return <Navigate to="/projects" replace />;
   const related = projects.filter(p => p.slug !== project.slug && p.category === project.category).slice(0, 2);
   return <><section className="case-hero"><div className="shell"><Link className="back-link" to="/projects">← All projects</Link><div className="case-title"><div><span className="kicker">{project.eyebrow}</span><RevealHeading as="h1" text={project.title} variant="type" /><p>{project.description}</p><div className="button-row"><a className="button button-primary" href={project.liveUrl} target="_blank" rel="noreferrer">Visit project <ExternalLink size={17} /></a><Link className="button button-ghost" to="/contact">Build something useful</Link></div></div><TerminalWindow label={`${project.slug}.live`}><ProjectVisual image={project.image} title={project.title} /></TerminalWindow></div></div></section>
-    <section className="section shell case-body"><aside><span>Project index</span><a href="#problem">01 Problem</a><a href="#build">02 Build</a><a href="#result">03 Result</a></aside><div className="case-copy"><section id="problem"><span className="kicker">01 / The problem</span><RevealHeading text={pageText(copy, "case_problem_heading")} variant="decrypt" /><p>{project.problem}</p></section><section id="build"><span className="kicker">02 / The build</span><RevealHeading text={pageText(copy, "case_build_heading")} variant="decrypt" /><p>{project.solution}</p><div className="stack-list">{project.stack.map(s => <span key={s}><Check size={14} />{s}</span>)}</div></section><section id="result"><span className="kicker">03 / The result</span><RevealHeading text={pageText(copy, "case_result_heading")} variant="decrypt" /><p>{project.result}</p>{project.demo && <div className="callout"><ShieldCheck size={20} /><span><strong>Honest mockup label</strong>This is a mockup build with a live client agreement in place. It is not presented as the client’s production storefront.</span></div>}</section></div></section>
+    <section className="section shell case-body"><aside><span>Project index</span><a href="#problem">01 Problem</a><a href="#build">02 Build</a><a href="#result">03 Result</a></aside><div className="case-copy"><section id="problem"><span className="kicker">01 / The problem</span><RevealHeading text={pageText(copy, "case_problem_heading")} variant="decrypt" /><p>{project.problem}</p></section><section id="build"><span className="kicker">02 / The build</span><RevealHeading text={pageText(copy, "case_build_heading")} variant="decrypt" /><p>{project.solution}</p><div className="stack-list">{project.stack.map(s => <span key={s}><Check size={14} />{s}</span>)}</div></section><section id="result"><span className="kicker">03 / The result</span><RevealHeading text={pageText(copy, "case_result_heading")} variant="decrypt" /><p>{project.result}</p>{project.resultMetrics && Object.keys(project.resultMetrics).length > 0 && <div className="project-metrics">{Object.entries(project.resultMetrics).map(([label, value]) => <div key={label}><strong>{value}</strong><span>{label}</span></div>)}</div>}{project.demo && <div className="callout"><ShieldCheck size={20} /><span><strong>Honest mockup label</strong>{project.demoNote || "This is a mockup build with a live client agreement in place. It is not presented as the client’s production storefront."}</span></div>}</section></div></section>
     {project.gallery?.length ? <section className="section section-lined"><div className="shell"><SectionHead label="A closer look" title="Project gallery." /><div className="project-gallery">{project.gallery.map((image, index) => <img key={image} src={image} alt={`${project.title} screenshot ${index + 1}`} loading="lazy" />)}</div></div></section> : null}
     {related.length > 0 && <section className="section section-lined"><div className="shell"><SectionHead label="Keep looking" title="Related work." /><div className="related-grid">{related.map(p => <Link to={`/projects/${p.slug}`} key={p.slug}><span>{p.eyebrow}</span><h3>{p.title}</h3><ArrowUpRight /></Link>)}</div></div></section>}<CTA /></>;
 }
@@ -192,18 +193,21 @@ function Contact() {
 }
 
 function ManagedCV() {
-  const copy = useContent().page("cv");
+  const { page, settings } = useContent();
+  const copy = page("cv");
   const portrait = pageText(copy, "portrait_image") || "/headshot.png";
   const cvFile = pageText(copy, "cv_file") || "/duke-chijimaka-jonathan-cv.pdf";
   const experience = zip3(pageList(copy, "experience_titles"), pageList(copy, "experience_details"), pageList(copy, "experience_meta"));
   const technical = zip3(pageList(copy, "technical_titles"), pageList(copy, "technical_details"), pageList(copy, "technical_meta"));
   const education = zip2(pageList(copy, "education_titles"), pageList(copy, "education_meta"));
   const certifications = zip2(pageList(copy, "certification_titles"), pageList(copy, "certification_meta"));
-  return <><PageHero label="CV" title={pageText(copy, "hero_title")} copy={pageText(copy, "hero_intro")} /><section className="section shell cv-layout"><aside><div className="portrait-mini"><img src={portrait} alt="Portrait of Duke Chijimaka Jonathan" width="1254" height="1254" /></div><h2>Duke Chijimaka Jonathan</h2><p>{pageList(copy, "sidebar_roles").map(role => <span className="cv-role" key={role}>{role}</span>)}</p><a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a><span>{pageText(copy, "sidebar_location")}</span><a className="button button-primary" href={cvFile} download><Download size={17} /> Download CV</a></aside><div className="cv-main"><CVSection title="Profile"><p>{pageText(copy, "profile_copy")}</p></CVSection><CVSection title="Selected outcomes"><ul>{pageList(copy, "outcome_items").map(item => <li key={item}>{item}</li>)}</ul></CVSection><CVSection title="Experience">{experience.map(([title, detail, metaText]) => <div className="cv-entry cv-entry-detail" key={title}><div><strong>{title}</strong><p>{detail}</p></div><span>{metaText}</span></div>)}</CVSection><CVSection title="Selected technical work">{technical.map(([title, detail, metaText]) => <div className="cv-entry cv-entry-detail" key={title}><div><strong>{title}</strong><p>{detail}</p></div><span>{metaText}</span></div>)}</CVSection><CVSection title="Core capabilities"><div className="tag-row">{pageList(copy, "capabilities").map(item => <span key={item}>{item}</span>)}</div></CVSection><CVSection title="Education & recognition">{education.map(([title, metaText]) => <div className="cv-entry" key={title}><strong>{title}</strong><span>{metaText}</span></div>)}</CVSection><CVSection title="Certifications">{certifications.map(([title, metaText]) => <div className="cv-entry" key={title}><strong>{title}</strong><span>{metaText}</span></div>)}</CVSection></div></section></>;
+  return <><PageHero label="CV" title={pageText(copy, "hero_title")} copy={pageText(copy, "hero_intro")} /><section className="section shell cv-layout"><aside><div className="portrait-mini"><img src={portrait} alt="Portrait of Duke Chijimaka Jonathan" width="1254" height="1254" /></div><h2>Duke Chijimaka Jonathan</h2><p>{pageList(copy, "sidebar_roles").map(role => <span className="cv-role" key={role}>{role}</span>)}</p><a href={`mailto:${settings.contact_email}`}>{settings.contact_email}</a><span>{pageText(copy, "sidebar_location")}</span><a className="button button-primary" href={cvFile} download><Download size={17} /> Download CV</a></aside><div className="cv-main"><CVSection title="Profile"><p>{pageText(copy, "profile_copy")}</p></CVSection><CVSection title="Selected outcomes"><ul>{pageList(copy, "outcome_items").map(item => <li key={item}>{item}</li>)}</ul></CVSection><CVSection title="Experience">{experience.map(([title, detail, metaText]) => <div className="cv-entry cv-entry-detail" key={title}><div><strong>{title}</strong><p>{detail}</p></div><span>{metaText}</span></div>)}</CVSection><CVSection title="Selected technical work">{technical.map(([title, detail, metaText]) => <div className="cv-entry cv-entry-detail" key={title}><div><strong>{title}</strong><p>{detail}</p></div><span>{metaText}</span></div>)}</CVSection><CVSection title="Core capabilities"><div className="tag-row">{pageList(copy, "capabilities").map(item => <span key={item}>{item}</span>)}</div></CVSection><CVSection title="Education & recognition">{education.map(([title, metaText]) => <div className="cv-entry" key={title}><strong>{title}</strong><span>{metaText}</span></div>)}</CVSection><CVSection title="Certifications">{certifications.map(([title, metaText]) => <div className="cv-entry" key={title}><strong>{title}</strong><span>{metaText}</span></div>)}</CVSection></div></section></>;
 }
 function CVSection({ title, children }: { title: string; children: ReactNode }) { return <section><span className="kicker">{title}</span>{children}</section> }
 
-function Blog() { const { blogPosts, page } = useContent(); const copy = page("blog"); return <><PageHero label="Articles" title={pageText(copy, "hero_title")} copy={pageText(copy, "hero_intro")} /><section className="section shell">{blogPosts.length ? <div className="blog-grid">{blogPosts.map((post, i) => <article key={post.id}>{post.coverImage && <img className="blog-card-image" src={post.coverImage} alt="" loading="lazy" />}<span className="kicker">Article · {String(i + 1).padStart(2, "0")}</span><RevealHeading text={post.title} variant="decrypt" /><p>{post.excerpt}</p>{post.publishedAt && <time className="muted" dateTime={post.publishedAt}>{new Date(post.publishedAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}</time>}<Link className="blog-read-link" to={`/blog/${post.slug}`}>Read article <ArrowRight size={15} /></Link></article>)}</div> : <TerminalWindow label="Articles"><div className="empty-state"><BookOpen /><RevealHeading text={pageText(copy, "empty_heading")} variant="type" /><p>{pageText(copy, "empty_copy")}</p></div></TerminalWindow>}</section></> }
+function Blog() { const { blogPosts, page } = useContent(); const copy = page("blog"); return <><PageHero label="Articles" title={pageText(copy, "hero_title")} copy={pageText(copy, "hero_intro")} /><section className="section shell">{blogPosts.length ? <div className="blog-grid">{blogPosts.map((post, i) => <article key={post.id}>{post.coverImage && <img className="blog-card-image" src={post.coverImage} alt="" loading="lazy" />}<span className="kicker">Article · {String(i + 1).padStart(2, "0")}</span><RevealHeading text={post.title} variant="decrypt" /><p>{post.excerpt}</p>{post.publishedAt && <time className="muted" dateTime={post.publishedAt}>{new Date(post.publishedAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}</time>}<Link className="blog-read-link" to={`/articles/${post.slug}`}>Read article <ArrowRight size={15} /></Link></article>)}</div> : <TerminalWindow label="Articles"><div className="empty-state"><BookOpen /><RevealHeading text={pageText(copy, "empty_heading")} variant="type" /><p>{pageText(copy, "empty_copy")}</p></div></TerminalWindow>}</section></> }
+
+function LegacyArticleRedirect() { const { slug } = useParams(); return <Navigate to={`/articles/${slug || ""}`} replace />; }
 
 function BlogDetail() {
   const { slug } = useParams();
@@ -211,9 +215,9 @@ function BlogDetail() {
   const post = blogPosts.find(item => item.slug === slug);
   const cleanBody = useMemo(() => DOMPurify.sanitize(post?.body || ""), [post?.body]);
   if (loading) return <section className="not-found"><span>…</span><h1>Loading article.</h1></section>;
-  if (!post) return <section className="not-found"><span>404</span><h1>That article isn’t available.</h1><p>The address may have changed, or the article may have been removed.</p><Link className="button button-primary" to="/blog">Return to articles <ArrowRight size={16} /></Link></section>;
+  if (!post) return <section className="not-found"><span>404</span><h1>That article isn’t available.</h1><p>The address may have changed, or the article may have been removed.</p><Link className="button button-primary" to="/articles">Return to articles <ArrowRight size={16} /></Link></section>;
   const words = (post.body || "").replace(/<[^>]*>/g, " ").trim().split(/\s+/).filter(Boolean).length;
-  return <><section className="blog-article-hero"><div className="shell"><Link className="back-link" to="/blog">← Back to articles</Link><span className="kicker">Article</span><h1>{post.title}</h1><p>{post.excerpt}</p><div><time dateTime={post.publishedAt}>{post.publishedAt ? new Date(post.publishedAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) : ""}</time><span>{Math.max(1, Math.ceil(words / 220))} min read</span></div></div></section>{post.coverImage && <img className="blog-cover" src={post.coverImage} alt="" />}<article className="section shell blog-article"><div className="blog-prose" dangerouslySetInnerHTML={{ __html: cleanBody }} /></article><CTA /></>;
+  return <><section className="blog-article-hero"><div className="shell"><Link className="back-link" to="/articles">← Back to articles</Link><span className="kicker">Article</span><h1>{post.title}</h1><p>{post.excerpt}</p><div><time dateTime={post.publishedAt}>{post.publishedAt ? new Date(post.publishedAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) : ""}</time><span>{Math.max(1, Math.ceil(words / 220))} min read</span></div></div></section>{post.coverImage && <img className="blog-cover" src={post.coverImage} alt="" />}<article className="section shell blog-article"><div className="blog-prose" dangerouslySetInnerHTML={{ __html: cleanBody }} /></article><CTA /></>;
 }
 
 function Legal({ type }: { type: "privacy" | "cookies" | "terms" }) { const copy = useContent().page(type); const titles = pageList(copy, "section_titles"); const copies = pageList(copy, "section_copies"); return <><PageHero label="Policies and terms" title={pageText(copy, "hero_title")} copy={pageText(copy, "hero_intro")}><span className="legal-date">Last updated: {pageText(copy, "updated_date")}</span></PageHero><section className="section shell legal-copy">{titles.map((title, index) => <section key={title}><span>0{index + 1}</span><div><RevealHeading text={title} variant="type" /><p>{copies[index]}</p></div></section>)}</section></> }
