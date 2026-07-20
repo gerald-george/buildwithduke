@@ -9,7 +9,7 @@ pages_build_output_dir = "build/client"
 [[d1_databases]]
 binding = "DB"
 database_name = "buildwithduke"
-database_id = "127728b6-43cc-4c27-bc5a-ec706bfe23a6"
+database_id = "3154f118-7efe-4071-8ad3-4bac39844ca0"
 
 [[r2_buckets]]
 binding = "MEDIA"
