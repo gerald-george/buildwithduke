@@ -11,7 +11,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
   try {
     await ensureManagedDefaults(env.DB);
     const [projects, pricing, testimonials, blogPosts, settings, pages] = await Promise.all([
-      rows(env.DB, "SELECT * FROM projects ORDER BY featured DESC, sort_order ASC, created_at DESC"),
+      rows(env.DB, "SELECT * FROM projects ORDER BY sort_order ASC, created_at DESC"),
       rows(env.DB, "SELECT * FROM pricing_tiers ORDER BY sort_order ASC"),
       rows(env.DB, "SELECT * FROM testimonials ORDER BY sort_order ASC"),
       rows(env.DB, "SELECT id, slug, title, excerpt, body, published_at, seo_title, meta_description, cover_image, focus_keyword, source_urls, ai_generated FROM blog_posts WHERE status = 'published' AND (published_at IS NULL OR datetime(published_at) <= datetime('now')) ORDER BY datetime(published_at) DESC, created_at DESC"),

@@ -125,14 +125,10 @@ pnpm exec wrangler kv namespace create CACHE
 
 Copy the returned identifiers into `apps/web/wrangler.toml`. Keep the binding names exactly `DB`, `MEDIA`, and `CACHE`.
 
-For a fresh database, apply `0001` and then `0002` in order. For an existing production database that already has the original schema, apply only `0002_page_content_and_daemon.sql`; rerunning `0001` against that database will correctly fail because its core tables already exist.
+This project deliberately keeps the complete schema in one initial migration. Apply `0001_initial.sql` when provisioning a fresh D1 database; update that file when the schema changes instead of adding later numbered migrations.
 
 ```bash
 pnpm exec wrangler d1 execute buildwithduke --local --config apps/web/wrangler.toml --file packages/db/migrations/0001_initial.sql
-pnpm exec wrangler d1 execute buildwithduke --local --config apps/web/wrangler.toml --file packages/db/migrations/0002_page_content_and_daemon.sql
-
-# Existing production database: apply only the additive upgrade.
-pnpm exec wrangler d1 execute buildwithduke --remote --config apps/web/wrangler.toml --file packages/db/migrations/0002_page_content_and_daemon.sql
 ```
 
 The migrations use safe `IF NOT EXISTS`/`INSERT OR IGNORE` operations for shared route records, but take a D1 backup before applying schema changes to a database with irreplaceable content.
@@ -197,14 +193,14 @@ OpenRouter model IDs and availability change over time, so the admin selector re
 `/admin` exposes:
 
 - **Pages**: structured route introductions, Home sections, Services, About, CV, Contact, Blog, shared CTA/footer copy, and legal text, plus per-route SEO fields.
-- **Projects**: case studies, screenshots, categories, mockup labels, technologies, and feature order.
-- **Testimonials**: verified quotes and ordering. Public quotes receive scroll-triggered typing animation.
-- **Pricing**: package names, GBP starting values, features, popularity, and order.
+- **Projects**: case studies, R2-backed screenshots with storage deletion, categories, mockup labels, technologies, and drag-and-drop display order.
+- **Testimonials**: verified quotes and drag-and-drop ordering. Public quotes receive scroll-triggered typing animation.
+- **Pricing**: package names, GBP starting values, features, popularity, and drag-and-drop order.
 - **Articles**: Tiptap HTML, search metadata, sources, draft/published status, and scheduling.
 - **Leads**: enquiry status, CSV export, and Outlook reply handoff.
 - **DAEMON**: deterministic custom responses and navigation/link/theme actions.
 - **Settings**: a strict public allowlist of business contact and availability values.
-- **Autoblog and Notifications**: integration readiness, automation controls, and audit history.
+- **Autoblog and Notifications**: contact-form readiness, automation controls, and deletable audit history.
 
 Published articles are linked from the main navigation and can appear on the Home page. Article bodies are allowlist-sanitized before D1 storage and sanitized again in the browser.
 
@@ -228,6 +224,7 @@ The Playwright suite covers desktop and mobile routes, navigation, responsive me
 - `githubpat.txt` is an ignored local deployment credential. It is not an application secret, must never be printed, and must never be committed.
 - Admin cookies are HttpOnly, Secure, SameSite Strict, signed, and expire after eight hours. Mutations require the session CSRF token.
 - Login attempts are rate-limited through `CACHE`.
+- Consent audit rows older than 12 months and consented DAEMON event rows older than 90 days are pruned as new rows arrive; completed autoblog runs can also be cleared from admin.
 - Public business settings and page content are explicitly constrained; sensitive operational values belong only in encrypted server secrets.
 - Bank details are never stored in public settings or client code. They are shared privately with an accepted quote or invoice.
 - `origin` must remain `https://github.com/gerald-george/buildwithduke.git`; production Git deployments target `origin/main`.

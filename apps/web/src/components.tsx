@@ -8,7 +8,7 @@ import {
 } from "react-icons/si";
 import { TbBrandOpenai } from "react-icons/tb";
 import { RevealHeading, usePageMotion } from "./motion";
-import { useContent } from "./content";
+import { formatBusinessHours, useContent } from "./content";
 
 export function IconBox({ children }: { children: ReactNode }) {
   return <span className="icon-box" aria-hidden="true">{children}</span>;
@@ -91,19 +91,18 @@ function ConsentAnalytics() {
 }
 
 function Footer() {
-  const { settings, page } = useContent();
-  const shared = page("common");
+  const { settings } = useContent();
   const whatsappUrl = `https://wa.me/${settings.whatsapp_number.replace(/\D/g, "")}?text=${encodeURIComponent("Hi Duke, I found your site and want to talk about a project.")}`;
   return <footer className="footer">
     <div className="shell footer-grid">
-      <div><Logo /><p className="muted">{String(shared.footer_intro || "Full-stack products and useful automation.")}<br />{String(shared.footer_service_area || "Remote · UK-wide.")}</p></div>
+      <div><Logo /></div>
       <div><span className="kicker">Go somewhere</span>{nav.slice(0, 5).map(([label, href]) => <Link key={href} to={href}>{label}</Link>)}</div>
       <div><span className="kicker">Start a conversation</span><a href={`mailto:${settings.contact_email}`}>{settings.contact_email}</a><a href={whatsappUrl} target="_blank" rel="noreferrer">WhatsApp · {settings.phone_display} <ArrowUpRight size={14} /></a></div>
       <div><span className="kicker">Find me</span><a href={settings.github_url} target="_blank" rel="noreferrer"><Github size={15} /> GitHub</a><a href={settings.instagram_url} target="_blank" rel="noreferrer"><Instagram size={15} /> Instagram</a><a href={settings.linkedin_url} target="_blank" rel="noreferrer"><Linkedin size={15} /> LinkedIn</a></div>
     </div>
     <div className="shell business-facts" aria-label="Business facts">
       <div><small>Studio</small><strong>{settings.business_name}</strong><span>{settings.industry}</span></div>
-      <div><small>Availability</small><strong>{settings.service_area}</strong><span>{settings.business_hours}</span></div>
+      <div><small>Availability</small><strong>{settings.service_area}</strong><span>{formatBusinessHours(settings.business_hours)}</span></div>
       <div><small>Payments</small><strong>{settings.payment_methods}</strong><span>Details shared privately after an agreed quote.</span></div>
     </div>
     <div className="shell footer-bottom"><span>© {new Date().getFullYear()} {settings.business_name}</span><span><Link to="/privacy">Privacy</Link> · <Link to="/cookies">Cookies</Link> · <Link to="/terms">Terms</Link> · <button className="footer-preferences" onClick={() => window.dispatchEvent(new Event("open-cookie-preferences"))}>Cookie preferences</button></span><Link className="built-with-love" to="/about">// built with <span role="img" aria-label="love">❤️</span></Link></div>

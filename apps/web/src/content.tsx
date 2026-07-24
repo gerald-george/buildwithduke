@@ -33,7 +33,7 @@ const defaultSettings: SiteSettings = {
   business_name: "Build With Duke", contact_email: CONTACT_EMAIL, phone_number: PHONE_NUMBER, phone_display: PHONE_DISPLAY,
   whatsapp_number: PHONE_NUMBER, service_area: "Remote · UK-wide", response_time: "within 24 hours, UK time",
   github_url: GITHUB_URL, instagram_url: INSTAGRAM_URL, linkedin_url: LINKEDIN_URL, accepting_projects: "true", visitor_guide_enabled: "true",
-  industry: "Full-stack web development and AI automation consultancy", business_hours: "Monday–Sunday, 09:00–22:59 GMT/BST", payment_methods: "Bank transfer only",
+  industry: "Full-stack web development and AI automation consultancy", business_hours: '{"days":"Monday–Sunday","opens":"09:00","closes":"22:59","timezone":"GMT/BST"}', payment_methods: "Bank transfer only",
 };
 
 const defaultPages = Object.fromEntries(Object.values(pageDefinitionBySlug).map(definition => [definition.slug, {
@@ -54,6 +54,17 @@ const json = <T,>(value: unknown, fallback: T): T => {
   if (typeof value !== "string") return fallback;
   try { return JSON.parse(value) as T; } catch { return fallback; }
 };
+
+export function formatBusinessHours(value: string) {
+  try {
+    const parsed = JSON.parse(value) as { days?: string; opens?: string; closes?: string; timezone?: string };
+    if (parsed && typeof parsed === "object") {
+      const time = parsed.opens && parsed.closes ? `${parsed.opens}–${parsed.closes}` : "";
+      return `${parsed.days || ""}${parsed.days && time ? ", " : ""}${time}${time && parsed.timezone ? " " : ""}${parsed.timezone || ""}`;
+    }
+  } catch { /* Existing plain-text values remain valid. */ }
+  return value;
+}
 
 const mockupLanguage = (value: unknown) => String(value)
   .replace(/\bDemo\b/g, "Mockup")

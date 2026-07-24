@@ -6,7 +6,7 @@ type ModuleName = keyof typeof definitions;
 type RecordValue = Record<string, unknown>;
 const definitions = {
   pages: { table: "page_content", columns: ["slug", "name", "seo_title", "meta_description", "content", "sort_order"], order: "sort_order ASC" },
-  projects: { table: "projects", columns: ["slug", "title", "eyebrow", "description", "problem", "solution", "result", "stack", "result_metrics", "screenshot_r2_keys", "image", "live_url", "demo_flag", "demo_note", "category", "featured", "sort_order"], order: "featured DESC, sort_order ASC, created_at DESC" },
+  projects: { table: "projects", columns: ["slug", "title", "eyebrow", "description", "problem", "solution", "result", "stack", "result_metrics", "screenshot_r2_keys", "image", "live_url", "demo_flag", "demo_note", "category", "featured", "sort_order"], order: "sort_order ASC, created_at DESC" },
   testimonials: { table: "testimonials", columns: ["author_name", "author_role", "company", "quote", "sort_order"], order: "sort_order ASC" },
   pricing: { table: "pricing_tiers", columns: ["name", "price_gbp", "description", "features", "is_popular", "sort_order"], order: "sort_order ASC" },
   leads: { table: "leads", columns: ["status"], order: "created_at DESC" },
@@ -56,11 +56,19 @@ async function mutate({ request, env }: EventContext<AdminEnv, string, unknown>,
   const auth = await requireAdmin(request, env, true);
   if (auth.error) return auth.error;
   if (!env.DB) return Response.json({ error: "The D1 database binding is not configured." }, { status: 503 });
-  const body = await request.json<{ module?: string; record?: RecordValue; id?: unknown }>().catch(() => null);
+  const body = await request.json<{ module?: string; record?: RecordValue; id?: unknown; order?: unknown[] }>().catch(() => null);
   const definition = definitionFor(body?.module || null);
   if (!body || !definition) return Response.json({ error: "Invalid admin request." }, { status: 400 });
+  if (action === "update" && body.order) {
+    if (!["projects", "testimonials", "pricing"].includes(body.module || "")) return Response.json({ error: "This content type does not support manual ordering." }, { status: 400 });
+    const ids = body.order.map(String);
+    if (!ids.length || new Set(ids).size !== ids.length || ids.some(id => !id)) return Response.json({ error: "The display order is invalid." }, { status: 400 });
+    const stored = (await env.DB.prepare(`SELECT id FROM ${definition.table}`).all<{ id: string }>()).results.map(row => row.id);
+    if (stored.length !== ids.length || stored.some(id => !ids.includes(id))) return Response.json({ error: "Refresh the list before rearranging it; the records have changed." }, { status: 409 });
+    await env.DB.batch(ids.map((id, index) => env.DB!.prepare(`UPDATE ${definition.table} SET sort_order = ? WHERE id = ?`).bind(index * 10, id)));
+    return Response.json({ ok: true });
+  }
   if (action === "delete") {
-    if (body.module === "leads") return Response.json({ error: "Lead deletion is handled through data-rights workflow." }, { status: 400 });
     if (body.module === "pages") return Response.json({ error: "Core site pages cannot be deleted." }, { status: 400 });
     const id = String(body.id || "");
     if (!id) return Response.json({ error: "The record id is missing." }, { status: 400 });
@@ -125,6 +133,13 @@ function validateRecord(module: ModuleName, record: RecordValue) {
   }
   if (module === "projects" && !["Web development", "AI automation", "Software"].includes(String(record.category))) return "Choose a valid project category.";
   if (module === "settings" && !publicSettingKeys.includes(String(record.key) as typeof publicSettingKeys[number])) return "Choose an approved public business setting.";
+  if (module === "settings" && record.key === "contact_email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(record.value))) return "Enter a valid public contact email.";
+  if (module === "settings" && record.key === "business_hours") {
+    try {
+      const hours = JSON.parse(String(record.value)) as Record<string, unknown>;
+      if (!hours.days || !/^\d{2}:\d{2}$/.test(String(hours.opens)) || !/^\d{2}:\d{2}$/.test(String(hours.closes)) || !hours.timezone) return "Complete the availability days, opening time, closing time and timezone.";
+    } catch { return "Use the structured business-hours controls."; }
+  }
   if (module === "settings" && String(record.key).endsWith("_url") && !isHttpUrl(record.value)) return "Public social links must use an http or https URL.";
   if (module === "projects" && record.live_url && !isHttpUrl(record.live_url)) return "The live project link must use an http or https URL.";
   if (module === "commands" && !["text", "navigate", "link", "theme"].includes(String(record.action_type || "text"))) return "Choose a valid command action.";

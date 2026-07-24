@@ -237,6 +237,19 @@ test("contact fast-lane copy and business facts have responsive structure", asyn
   await expect(facts.getByText("Full-stack web development and AI automation consultancy", { exact: true })).toBeVisible();
   await expect(facts.getByText("Monday–Sunday, 09:00–22:59 GMT/BST", { exact: true })).toBeVisible();
   await expect(facts.getByText("Bank transfer only", { exact: true })).toBeVisible();
+  await expect(page.locator(".footer-grid").getByText("Full-stack products and useful automation.", { exact: true })).toHaveCount(0);
+});
+
+test("contact form surfaces the server reason instead of masking every failure", async ({ page }) => {
+  await page.route("**/api/contact", route => route.fulfill({ status: 503, json: { error: "The enquiry could not be stored just now. Please try again in a moment." } }));
+  await page.goto("/contact");
+  await page.getByLabel("Name").fill("Ada Lovelace");
+  await page.getByLabel("Email").fill("ada@example.com");
+  await page.getByLabel("Tell me about it").fill("I would like to discuss a useful new web project with you.");
+  await page.locator('input[name="consent"]').check();
+  await page.getByRole("button", { name: "Send enquiry" }).click();
+  await expect(page.getByRole("alert")).toHaveText("The enquiry could not be stored just now. Please try again in a moment.");
+  await expect(page.getByText("The form could not send just now. Email or WhatsApp still works.", { exact: true })).toHaveCount(0);
 });
 
 test("cookie preferences open as a centred dialog and persist", async ({ page }) => {
@@ -327,7 +340,77 @@ test("admin exposes structured route, About and CV content without raw JSON", as
   await page.getByRole("button", { name: "Edit CV" }).click();
   await expect(page.getByText("CV builder", { exact: true })).toBeVisible();
   await expect(page.getByLabel("Role").first()).toBeVisible();
+  await expect(page.getByLabel("Employer").first()).toBeVisible();
+  await expect(page.getByLabel("Dates").first()).toBeVisible();
   await expect(page.getByText("Upload PDF")).toBeVisible();
+});
+
+test("admin uses typed availability controls and drag-and-drop record ordering", async ({ page, isMobile }) => {
+  let reordered: string[] = [];
+  await page.route("**/api/admin/session", route => route.fulfill({ json: { ok: true, csrf: "test-csrf" } }));
+  await page.route("**/api/admin/data**", async route => {
+    const request = route.request();
+    const module = new URL(request.url()).searchParams.get("module");
+    if (request.method() === "PUT") { reordered = (JSON.parse(request.postData() || "{}") as { order?: string[] }).order || []; return route.fulfill({ json: { ok: true } }); }
+    if (module === "overview") return route.fulfill({ json: { counts: { pricing: 2, settings: 1 }, newLeads: 0, draftPosts: 0, publishedPosts: 0, recentLeads: [] } });
+    if (module === "pricing") return route.fulfill({ json: { rows: [
+      { id: "price-1", name: "Foundation", price_gbp: 499, description: "First", features: "[]", is_popular: 0, sort_order: 0 },
+      { id: "price-2", name: "Growth", price_gbp: 999, description: "Second", features: "[]", is_popular: 0, sort_order: 10 },
+    ] } });
+    if (module === "settings") return route.fulfill({ json: { rows: [{ id: "hours", key: "business_hours", value: "Monday–Sunday, 09:00–22:59 GMT/BST" }] } });
+    return route.fulfill({ json: { rows: [] } });
+  });
+  await page.goto("/admin");
+  await page.getByRole("button", { name: /Pricing Packages/ }).click();
+  await expect(page.getByText("Drag records to set their public display order.")).toBeVisible();
+  if (isMobile) await page.getByRole("button", { name: "Move Growth earlier" }).click();
+  else await page.locator(".admin-drag-handle").first().dragTo(page.locator(".admin-records article").nth(1));
+  await expect.poll(() => reordered).toEqual(["price-2", "price-1"]);
+  await page.getByRole("button", { name: /Settings Business details/ }).click();
+  await page.getByRole("button", { name: "Edit Business hours" }).click();
+  await expect(page.getByLabel("Days available")).toHaveValue("Monday–Sunday");
+  await expect(page.getByLabel("Opening time")).toHaveValue("09:00");
+  await expect(page.getByLabel("Closing time")).toHaveValue("22:59");
+  await expect(page.getByLabel("Timezone")).toHaveValue("GMT/BST");
+});
+
+test("admin can clear completed autoblog history", async ({ page }) => {
+  let deleteBody: Record<string, unknown> = {};
+  await page.route("**/api/admin/session", route => route.fulfill({ json: { ok: true, csrf: "test-csrf" } }));
+  await page.route("**/api/admin/data?module=overview", route => route.fulfill({ json: { counts: {}, newLeads: 0, draftPosts: 0, publishedPosts: 0, recentLeads: [] } }));
+  await page.route("**/api/admin/autoblog", route => {
+    if (route.request().method() === "DELETE") { deleteBody = JSON.parse(route.request().postData() || "{}"); return route.fulfill({ json: { ok: true, deleted: 1 } }); }
+    return route.fulfill({ json: { configured: { openrouter: true, serpapi: true, scheduler: true }, settings: { id: "primary", enabled: 0, interval_hours: 168, topics: '["AI automation"]', model: "openrouter/free", search_country: "uk", search_language: "en", publish_mode: "draft", min_words: 900, max_posts_per_month: 4, similarity_threshold: 0.58 }, runs: [{ id: "run-1", status: "failed", query: "AI automation", message: "Provider unavailable", started_at: "2026-07-19T10:00:00.000Z", completed_at: "2026-07-19T10:01:00.000Z" }] } });
+  });
+  page.on("dialog", dialog => dialog.accept());
+  await page.goto("/admin");
+  await page.getByRole("button", { name: /Autoblog Research/ }).click();
+  await page.getByRole("button", { name: "Clear completed" }).click();
+  await expect.poll(() => deleteBody).toEqual({ scope: "completed" });
+  await expect(page.getByText("1 audit record deleted.")).toBeVisible();
+});
+
+test("admin deletes detached R2 uploads only after the record is saved", async ({ page }) => {
+  const mediaKey = "123e4567-e89b-42d3-a456-426614174000.png";
+  let deletedKey = "";
+  await page.route("**/api/admin/session", route => route.fulfill({ json: { ok: true, csrf: "test-csrf" } }));
+  await page.route("**/api/admin/data**", route => {
+    const module = new URL(route.request().url()).searchParams.get("module");
+    if (route.request().method() === "PUT") return route.fulfill({ json: { ok: true } });
+    if (module === "overview") return route.fulfill({ json: { counts: { projects: 1 }, newLeads: 0, draftPosts: 0, publishedPosts: 0, recentLeads: [] } });
+    if (module === "projects") return route.fulfill({ json: { rows: [{ id: "project-1", slug: "example", title: "Example project", description: "A real project", category: "Software", image: `/api/media/${mediaKey}`, stack: "[]", result_metrics: "{}", screenshot_r2_keys: "[]", featured: 0, demo_flag: 0, sort_order: 0 }] } });
+    return route.fulfill({ json: { rows: [] } });
+  });
+  await page.route("**/api/admin/media", route => { deletedKey = String((JSON.parse(route.request().postData() || "{}") as { key?: string }).key || ""); return route.fulfill({ json: { ok: true } }); });
+  page.on("dialog", dialog => dialog.accept());
+  await page.goto("/admin");
+  await page.getByRole("button", { name: /Projects Case studies/ }).click();
+  await page.getByRole("button", { name: "Edit Example project" }).click();
+  await page.getByRole("button", { name: "Delete file" }).click();
+  expect(deletedKey).toBe("");
+  await expect(page.getByText("marked for deletion", { exact: false })).toBeVisible();
+  await page.getByRole("button", { name: "Save record" }).click();
+  await expect.poll(() => deletedKey).toBe(mediaKey);
 });
 
 test("admin exposes free Gmail notifications and configurable autoblogging", async ({ page }) => {

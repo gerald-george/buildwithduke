@@ -19,7 +19,7 @@ const settings = [
   ["accepting_projects", "true"],
   ["visitor_guide_enabled", "true"],
   ["industry", "Full-stack web development and AI automation consultancy"],
-  ["business_hours", "Monday–Sunday, 09:00–22:59 GMT/BST"],
+  ["business_hours", '{"days":"Monday–Sunday","opens":"09:00","closes":"22:59","timezone":"GMT/BST"}'],
   ["payment_methods", "Bank transfer only"],
 ] as const;
 

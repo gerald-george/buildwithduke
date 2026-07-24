@@ -29,27 +29,41 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   if (env.CACHE && Number(await env.CACHE.get(rateKey) || 0) >= 5) return Response.json({ error: "Too many enquiries from this connection. Please try again later." }, { status: 429 });
   const body = await request.json<ContactBody>().catch(() => null);
   if (!body || body.website) return Response.json({ ok: true });
+  if (typeof body.name !== "string" || typeof body.email !== "string" || typeof body.message !== "string" || (body.company != null && typeof body.company !== "string") || (body.projectType != null && typeof body.projectType !== "string") || (body.budget != null && typeof body.budget !== "string")) {
+    return Response.json({ error: "Please complete all required fields." }, { status: 400 });
+  }
   if (!body.name?.trim() || !emailPattern.test(body.email || "") || !body.message || body.message.trim().length < 20 || body.consent !== "yes") {
     return Response.json({ error: "Please complete all required fields." }, { status: 400 });
   }
 
   if (!env.TURNSTILE_SECRET_KEY) return Response.json({ error: "The spam check is not configured." }, { status: 503 });
   {
+    const token = body.turnstileToken || body["cf-turnstile-response"] || "";
+    if (!token) return Response.json({ error: "Please complete the spam check, then send your enquiry again." }, { status: 400 });
     const turnstile = new FormData();
     turnstile.set("secret", env.TURNSTILE_SECRET_KEY);
-    turnstile.set("response", body.turnstileToken || body["cf-turnstile-response"] || "");
+    turnstile.set("response", token);
     turnstile.set("remoteip", request.headers.get("CF-Connecting-IP") || "");
-    const check = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", { method: "POST", body: turnstile });
-    const result = await check.json<{ success: boolean }>();
-    if (!result.success) return Response.json({ error: "Spam check failed." }, { status: 403 });
+    const check = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", { method: "POST", body: turnstile }).catch(() => null);
+    if (!check) return Response.json({ error: "The spam check is temporarily unavailable. Please try again." }, { status: 503 });
+    const result = await check.json<{ success?: boolean; [key: string]: unknown }>().catch(() => null);
+    if (!check.ok || !result?.success) {
+      console.error("Turnstile rejected a contact enquiry.", JSON.stringify(result?.["error-codes"] || []));
+      return Response.json({ error: "The spam check expired or was rejected. Please try it again." }, { status: 403 });
+    }
   }
 
   if (!env.DB) return Response.json({ error: "The enquiry service is not configured." }, { status: 503 });
   const id = crypto.randomUUID();
-  await env.DB.prepare(`INSERT INTO leads (id, name, email, company, project_type, budget_range, message, status, consent_at, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, 'new', datetime('now'), datetime('now'))`)
-    .bind(id, body.name.trim(), body.email!.trim().toLowerCase(), body.company?.trim() || null, body.projectType || null, body.budget || null, body.message.trim())
-    .run();
+  try {
+    await env.DB.prepare(`INSERT INTO leads (id, name, email, company, project_type, budget_range, message, status, consent_at, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 'new', datetime('now'), datetime('now'))`)
+      .bind(id, body.name.trim().slice(0, 120), body.email!.trim().toLowerCase().slice(0, 254), body.company?.trim().slice(0, 160) || null, body.projectType?.slice(0, 160) || null, body.budget?.slice(0, 120) || null, body.message.trim().slice(0, 5000))
+      .run();
+  } catch (error) {
+    console.error("Contact enquiry storage failed.", error instanceof Error ? error.message : "Unknown D1 error");
+    return Response.json({ error: "The enquiry could not be stored just now. Please try again in a moment." }, { status: 503 });
+  }
   if (env.CACHE) { const count = Number(await env.CACHE.get(rateKey) || 0) + 1; await env.CACHE.put(rateKey, String(count), { expirationTtl: 3600 }); }
 
   await deliverNotification(env, body);

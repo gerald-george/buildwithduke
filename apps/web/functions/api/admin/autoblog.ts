@@ -38,6 +38,22 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   catch (error) { return Response.json({ error: error instanceof Error ? error.message : "Autoblog failed." }, { status: 500 }); }
 };
 
+export const onRequestDelete: PagesFunction<Env> = async ({ request, env }) => {
+  const auth = await requireAdmin(request, env, true);
+  if (auth.error) return auth.error;
+  if (!env.DB) return Response.json({ error: "The D1 database binding is not configured." }, { status: 503 });
+  const body = await request.json<{ id?: unknown; scope?: unknown }>().catch(() => null);
+  if (body?.scope === "completed") {
+    const result = await env.DB.prepare("DELETE FROM autoblog_runs WHERE status != 'running'").run();
+    return Response.json({ ok: true, deleted: result.meta.changes });
+  }
+  const id = String(body?.id || "");
+  if (!id) return Response.json({ error: "Choose a run to delete." }, { status: 400 });
+  const result = await env.DB.prepare("DELETE FROM autoblog_runs WHERE id = ? AND status != 'running'").bind(id).run();
+  if (!result.meta.changes) return Response.json({ error: "Running audits cannot be deleted." }, { status: 409 });
+  return Response.json({ ok: true, deleted: result.meta.changes });
+};
+
 function validate(value: Record<string, unknown>) {
   if ("interval_hours" in value && (Number(value.interval_hours) < 6 || Number(value.interval_hours) > 2160)) return "Choose an interval between 6 and 2,160 hours.";
   if ("min_words" in value && (Number(value.min_words) < 600 || Number(value.min_words) > 3000)) return "Choose an article length between 600 and 3,000 words.";

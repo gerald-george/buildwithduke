@@ -29,3 +29,16 @@ export const onRequestPost: PagesFunction<MediaEnv> = async ({ request, env }) =
   });
   return Response.json({ ok: true, key, url: `/api/media/${key}` }, { status: 201, headers: { "Cache-Control": "no-store" } });
 };
+
+export const onRequestDelete: PagesFunction<MediaEnv> = async ({ request, env }) => {
+  const auth = await requireAdmin(request, env, true);
+  if (auth.error) return auth.error;
+  if (!env.MEDIA) return Response.json({ error: "The R2 media binding is not configured." }, { status: 503 });
+  const body = await request.json<{ key?: unknown }>().catch(() => null);
+  const key = String(body?.key || "");
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(?:jpg|png|webp|avif|pdf)$/i.test(key)) {
+    return Response.json({ error: "Choose a valid uploaded file." }, { status: 400 });
+  }
+  await env.MEDIA.delete(key);
+  return Response.json({ ok: true });
+};
